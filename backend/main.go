@@ -68,13 +68,15 @@ func main() {
 	wsHub := handlers.NewWSHub()
 	go wsHub.Run()
 
+	// 创建处理器（单一实例，ticker 和路由共享）
+	goldHandler := handlers.NewGoldHandler(wsHub)
+	newsHandler := handlers.NewNewsHandler()
+	klineHandler := handlers.NewKlineHandler()
+
 	// 启动定时广播协程（每3秒推送一次数据）
 	go func() {
 		ticker := time.NewTicker(3 * time.Second)
 		defer ticker.Stop()
-
-		// 模拟 GoldHandler 用于获取数据
-		goldHandler := handlers.NewGoldHandler(wsHub)
 
 		for range ticker.C {
 			if wsHub.ClientCount() > 0 {
@@ -82,11 +84,6 @@ func main() {
 			}
 		}
 	}()
-
-	// 创建处理器
-	goldHandler := handlers.NewGoldHandler(wsHub)
-	newsHandler := handlers.NewNewsHandler()
-	klineHandler := handlers.NewKlineHandler()
 
 	// API 路由
 	api := r.Group("/api")
