@@ -11,11 +11,11 @@
     <div class="sync-stats" v-if="showStats">
       <div class="stat-item">
         <span class="stat-label">延迟</span>
-        <span class="stat-value">{{ latency }}ms</span>
+        <span class="stat-value">{{ latencyDisplay }}ms</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">缓存</span>
-        <span class="stat-value">{{ cacheStats.recordCount }}</span>
+        <span class="stat-value">{{ recordCount }}</span>
       </div>
     </div>
     <!-- 数据源状态 -->
@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps({
   showDetails: {
@@ -52,18 +52,50 @@ const props = defineProps({
   showStats: {
     type: Boolean,
     default: false
+  },
+  connected: {
+    type: Boolean,
+    default: false
+  },
+  reconnecting: {
+    type: Boolean,
+    default: false
+  },
+  latency: {
+    type: Number,
+    default: 0
+  },
+  recordCount: {
+    type: Number,
+    default: 0
+  },
+  lastUpdate: {
+    type: Number,
+    default: 0
+  },
+  sourceStatus: {
+    type: Object,
+    default: () => ({})
   }
 });
 
-const syncStatus = ref('offline'); // offline, connecting, connected, error
-const isSyncing = ref(false);
-const latency = ref('--');
-const cacheStats = ref({ recordCount: 0, lastUpdate: null });
-const lastUpdateTime = ref('');
-const sourceStatus = ref({
-  sina: 'ok',      // ok, warning, error
-  eastmoney: 'ok',
-  gate: 'ok'
+const syncStatus = computed(() => {
+  if (props.reconnecting) return 'connecting';
+  if (props.connected) return 'connected';
+  return 'offline';
+});
+
+const isSyncing = computed(() => props.reconnecting);
+
+const lastUpdateTime = computed(() => {
+  if (!props.lastUpdate) return '';
+  const date = new Date(props.lastUpdate);
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+});
+
+const latencyDisplay = computed(() => {
+  if (props.latency === 0 || props.latency === null || props.latency === undefined) return '--';
+  return props.latency;
 });
 
 const statusLabel = computed(() => {
@@ -83,7 +115,7 @@ const statusLabel = computed(() => {
 
 const syncDetails = computed(() => {
   if (syncStatus.value === 'connected') {
-    const okCount = Object.values(sourceStatus.value).filter(s => s === 'ok').length;
+    const okCount = Object.values(props.sourceStatus || {}).filter(s => s === 'ok').length;
     return `${okCount}/3 数据源正常`;
   } else if (syncStatus.value === 'error') {
     return '正在尝试重新连接';
@@ -95,45 +127,8 @@ const syncDetails = computed(() => {
 
 // 获取数据源状态样式
 const getSourceStatus = (source) => {
-  return sourceStatus.value[source] || 'ok';
+  return props.sourceStatus?.[source] || 'ok';
 };
-
-// 更新状态
-const updateStatus = (status, syncing = false, delay = null) => {
-  syncStatus.value = status;
-  isSyncing.value = syncing;
-  if (delay !== null && delay !== undefined && typeof delay === 'number') {
-    latency.value = delay;
-  }
-};
-
-// 更新缓存统计
-const updateCacheStats = (stats) => {
-  if (stats && typeof stats.recordCount === 'number') {
-    cacheStats.value = {
-      recordCount: stats.recordCount,
-      lastUpdate: stats.lastUpdate || null
-    };
-    if (stats.lastUpdate) {
-      const date = new Date(stats.lastUpdate);
-      lastUpdateTime.value = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    }
-  }
-};
-
-// 更新数据源状态
-const updateSourceStatus = (sources) => {
-  if (sources) {
-    sourceStatus.value = { ...sourceStatus.value, ...sources };
-  }
-};
-
-// 暴露方法给父组件
-defineExpose({
-  updateStatus,
-  updateCacheStats,
-  updateSourceStatus
-});
 </script>
 
 <style scoped lang="scss">

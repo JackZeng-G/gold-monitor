@@ -7,6 +7,12 @@
           ref="syncIndicatorRef"
           :show-details="true"
           :show-stats="true"
+          :connected="store.wsConnected"
+          :reconnecting="store.wsReconnecting"
+          :latency="store.syncStats.latency"
+          :record-count="store.syncStats.recordCount"
+          :last-update="store.syncStats.lastUpdate"
+          :source-status="store.sourceStatus"
         />
         <SettingsPanel :polling-mode="store.pollingMode" />
       </template>
@@ -82,29 +88,7 @@ const store = useGoldStore();
 const isDataLoaded = ref(false);
 const syncIndicatorRef = ref(null);
 
-// 合并监听同步状态和统计数据变化
-watch(
-  () => ({
-    status: store.syncStatus,
-    latency: store.syncStats.latency,
-    recordCount: store.syncStats.recordCount,
-    lastUpdate: store.syncStats.lastUpdate,
-    sourceStatus: store.sourceStatus
-  }),
-  (stats) => {
-    if (syncIndicatorRef.value) {
-      syncIndicatorRef.value.updateStatus(stats.status, stats.status === 'connecting', stats.latency);
-      syncIndicatorRef.value.updateCacheStats({
-        recordCount: stats.recordCount,
-        lastUpdate: stats.lastUpdate
-      });
-      syncIndicatorRef.value.updateSourceStatus(stats.sourceStatus);
-    }
-  },
-  { deep: true }
-);
-
-// 监听数据加载
+// 监听数据加载状态
 watch(() => store.lastUpdate, (val) => {
   if (val && !isDataLoaded.value) {
     isDataLoaded.value = true;
@@ -129,15 +113,6 @@ onMounted(async () => {
   isDataLoaded.value = true;
   // 更新缓存统计
   await store.updateCacheStats();
-  // 初始化同步指示器状态
-  if (syncIndicatorRef.value) {
-    syncIndicatorRef.value.updateStatus(store.syncStatus, false, store.syncStats.latency);
-    syncIndicatorRef.value.updateCacheStats({
-      recordCount: store.syncStats.recordCount,
-      lastUpdate: store.syncStats.lastUpdate
-    });
-    syncIndicatorRef.value.updateSourceStatus(store.sourceStatus);
-  }
 });
 
 onUnmounted(() => {
