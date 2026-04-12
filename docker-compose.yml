@@ -1,0 +1,14 @@
+services:
+  gold-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gold-monitor:latest
+    container_name: gold-monitor
+    restart: unless-stopped
+    ports:
+      - "20031:8081"
+    environment:
+      - TZ=Asia/Shanghai
+      - GIN_MODE=release
+    network_mode: bridge

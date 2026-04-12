@@ -1,0 +1,391 @@
+// ========================================
+// 黄金看盘 - Modern Fresh Glassmorphism
+// ========================================
+
+// 使用系统字体，避免外网字体加载问题
+// $font-display: 'DM Sans', $font-body: 'DM Sans', $font-mono: 'JetBrains Mono' 改为系统字体
+
+// ========================================
+// 色彩系统 - 多彩渐变
+// ========================================
+
+// 基础白色系
+$color-white: #ffffff;
+$color-gray-50: #f8fafc;
+$color-gray-100: #f1f5f9;
+$color-gray-200: #e2e8f0;
+$color-gray-300: #cbd5e1;
+$color-gray-400: #94a3b8;
+$color-gray-500: #64748b;
+$color-gray-600: #475569;
+$color-gray-700: #334155;
+$color-gray-800: #1e293b;
+$color-gray-900: #0f172a;
+
+// 渐变色 - 涨（橙粉）
+$color-up-from: #f97316;
+$color-up-to: #ec4899;
+$color-up: #f97316;
+$color-up-light: #fb923c;
+$color-up-bg: rgba(249, 115, 22, 0.1);
+$color-up-border: rgba(249, 115, 22, 0.3);
+
+// 渐变色 - 跌（青绿）
+$color-down-from: #06b6d4;
+$color-down-to: #10b981;
+$color-down: #10b981;
+$color-down-light: #34d399;
+$color-down-bg: rgba(16, 185, 129, 0.1);
+$color-down-border: rgba(16, 185, 129, 0.3);
+
+// 品牌渐变（紫蓝）
+$color-brand-from: #8b5cf6;
+$color-brand-to: #3b82f6;
+$color-brand: #8b5cf6;
+
+// 多彩渐变
+$color-rainbow-1: #f472b6;
+$color-rainbow-2: #a78bfa;
+$color-rainbow-3: #60a5fa;
+$color-rainbow-4: #34d399;
+
+// 背景色
+$color-bg-primary: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+$color-bg-card: rgba(255, 255, 255, 0.7);
+$color-bg-card-solid: #ffffff;
+$color-bg-hover: rgba(139, 92, 246, 0.08);
+$color-bg-elevated: rgba(255, 255, 255, 0.9);
+
+// 文字颜色
+$color-text: #1e293b;
+$color-text-secondary: #475569;
+$color-text-muted: #94a3b8;
+
+// 边框颜色
+$color-border: rgba(148, 163, 184, 0.2);
+$color-border-light: rgba(148, 163, 184, 0.1);
+$color-border-glass: rgba(255, 255, 255, 0.8);
+$color-border-gold: rgba(139, 92, 246, 0.25);
+$color-border-gold-strong: rgba(139, 92, 246, 0.5);
+
+// 中性色
+$color-neutral: $color-gray-500;
+$color-neutral-bg: rgba($color-gray-500, 0.1);
+
+// ========================================
+// 渐变系统
+// ========================================
+
+$gradient-up: linear-gradient(135deg, $color-up-from 0%, $color-up-to 100%);
+$gradient-down: linear-gradient(135deg, $color-down-from 0%, $color-down-to 100%);
+$gradient-brand: linear-gradient(135deg, $color-brand-from 0%, $color-brand-to 100%);
+$gradient-rainbow: linear-gradient(90deg, $color-rainbow-1 0%, $color-rainbow-2 33%, $color-rainbow-3 66%, $color-rainbow-4 100%);
+$gradient-card: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+$gradient-header: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
+
+// 背景光斑渐变
+$gradient-blob-1: radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
+$gradient-blob-2: radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.12) 0%, transparent 50%);
+$gradient-blob-3: radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
+
+// ========================================
+// 阴影系统
+// ========================================
+
+$shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+$shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+$shadow-md: 0 4px 8px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.06);
+$shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.04);
+$shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.04);
+$shadow-2xl: 0 24px 48px rgba(0, 0, 0, 0.1), 0 12px 24px rgba(0, 0, 0, 0.06);
+$shadow-card: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+$shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.04);
+$shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.08);
+$shadow-up: 0 4px 16px rgba(249, 115, 22, 0.2);
+$shadow-down: 0 4px 16px rgba(16, 185, 129, 0.2);
+$shadow-brand: 0 4px 16px rgba(139, 92, 246, 0.2);
+
+// ========================================
+// 间距系统
+// ========================================
+
+$spacing-2xs: 2px;
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-2xl: 48px;
+$spacing-3xl: 64px;
+$spacing-4xl: 96px;
+
+// ========================================
+// 圆角系统
+// ========================================
+
+$border-radius-2xs: 4px;
+$border-radius-xs: 6px;
+$border-radius-sm: 8px;
+$border-radius-md: 12px;
+$border-radius-lg: 16px;
+$border-radius-xl: 20px;
+$border-radius-2xl: 24px;
+$border-radius-full: 9999px;
+
+// ========================================
+// 字体系统
+// ========================================
+
+// 使用系统字体栈
+$font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+$font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+$font-mono: 'SF Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+
+// 字重
+$font-weight-regular: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// 字号系统
+$font-size-xs: 12px;
+$font-size-sm: 13px;
+$font-size-md: 15px;
+$font-size-lg: 17px;
+$font-size-xl: 19px;
+$font-size-2xl: 22px;
+$font-size-3xl: 26px;
+$font-size-4xl: 30px;
+$font-size-5xl: 36px;
+$font-size-6xl: 44px;
+
+// ========================================
+// 动画系统
+// ========================================
+
+$transition-instant: 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+$transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+$transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+$transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+$transition-smooth: 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+$transition-spring: 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+// ========================================
+// Mixins
+// ========================================
+
+// 渐变文字
+@mixin gradient-text($gradient) {
+  background: $gradient;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+// 玻璃卡片
+@mixin glass-card {
+  background: $color-bg-card;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid $color-border-glass;
+  border-radius: $border-radius-xl;
+  box-shadow: $shadow-glass;
+  position: relative;
+  overflow: hidden;
+  transition: transform $transition-smooth, box-shadow $transition-smooth, border-color $transition-smooth;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+  }
+
+  &:hover {
+    box-shadow: $shadow-card-hover;
+    transform: translateY(-2px);
+  }
+}
+
+// 基础卡片（兼容旧代码）
+@mixin card-base {
+  @include glass-card;
+}
+
+// 数字高亮
+@mixin number-highlight {
+  font-family: $font-mono;
+  font-weight: $font-weight-semibold;
+  font-feature-settings: 'tnum' on, 'lnum' on;
+}
+
+// 滚动优化
+@mixin scroll-optimized {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+// 字号 mixins
+@mixin text-xs { font-size: $font-size-xs; }
+@mixin text-sm { font-size: $font-size-sm; }
+@mixin text-md { font-size: $font-size-md; }
+@mixin text-lg { font-size: $font-size-lg; }
+@mixin text-xl { font-size: $font-size-xl; }
+@mixin text-2xl { font-size: $font-size-2xl; }
+
+// ========================================
+// 关键帧动画
+// ========================================
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes blob-float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -30px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes price-flash {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+@keyframes border-glow {
+  0%, 100% {
+    border-color: $color-border-glass;
+    box-shadow: 0 0 0 rgba(139, 92, 246, 0);
+  }
+  50% {
+    border-color: rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+  }
+}
+
+// ========================================
+// 响应式断点
+// ========================================
+
+$breakpoint-xs: 480px;
+$breakpoint-sm: 640px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 1024px;
+$breakpoint-xl: 1280px;
+$breakpoint-2xl: 1536px;
+
+// 响应式 Mixins
+@mixin xs {
+  @media (max-width: $breakpoint-xs) { @content; }
+}
+
+@mixin sm {
+  @media (max-width: $breakpoint-sm) { @content; }
+}
+
+@mixin md {
+  @media (max-width: $breakpoint-md) { @content; }
+}
+
+@mixin lg {
+  @media (max-width: $breakpoint-lg) { @content; }
+}
+
+@mixin xl {
+  @media (max-width: $breakpoint-xl) { @content; }
+}
+
+@mixin xxl {
+  @media (max-width: $breakpoint-2xl) { @content; }
+}
+
+// ========================================
+// 工具类
+// ========================================
+
+.text-up { color: $color-up; }
+.text-down { color: $color-down; }
+.text-muted { color: $color-text-muted; }
+.font-mono { font-family: $font-mono; }
+.font-display { font-family: $font-display; }
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
