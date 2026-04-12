@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 )
@@ -134,159 +133,6 @@ func (s *NewsService) fetchFromSina(url string) ([]NewsItem, error) {
 	return news, nil
 }
 
-// FetchGoldNewsFromEastMoney 从东方财富获取黄金新闻（备用）
-func (s *NewsService) FetchGoldNewsFromEastMoney() ([]NewsItem, error) {
-	// 东方财富黄金新闻搜索
-	url := "https://searchapi.eastmoney.com/bussiness/web/QuotationLabelSearch?cb=&keyword=黄金&type=cta&pi=1&ps=15&client=web"
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-	req.Header.Set("Referer", "https://www.eastmoney.com/")
-	req.Header.Set("Accept", "*/*")
-
-	resp, err := s.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	// 东方财富返回的是 JSONP 格式，需要提取 JSON
-	bodyStr := string(body)
-	// 去除 JSONP 包装
-	if strings.HasPrefix(bodyStr, "(") {
-		bodyStr = strings.Trim(bodyStr, "()")
-	}
-
-	// 简单解析，提取标题和时间
-	news := make([]NewsItem, 0)
-
-	// 使用正则提取
-	titleRegex := regexp.MustCompile(`"Title":"([^"]+)"`)
-	timeRegex := regexp.MustCompile(`"ShowTime":"([^"]+)"`)
-	urlRegex := regexp.MustCompile(`"Url":"([^"]+)"`)
-	sourceRegex := regexp.MustCompile(`"MediaName":"([^"]+)"`)
-
-	titles := titleRegex.FindAllStringSubmatch(bodyStr, -1)
-	times := timeRegex.FindAllStringSubmatch(bodyStr, -1)
-	urls := urlRegex.FindAllStringSubmatch(bodyStr, -1)
-	sources := sourceRegex.FindAllStringSubmatch(bodyStr, -1)
-
-	maxLen := len(titles)
-	if len(times) < maxLen {
-		maxLen = len(times)
-	}
-	if len(urls) < maxLen {
-		maxLen = len(urls)
-	}
-
-	for i := 0; i < maxLen && i < 15; i++ {
-		title := ""
-		timeStr := ""
-		newsURL := ""
-		source := "东方财富"
-
-		if len(titles[i]) > 1 {
-			title = titles[i][1]
-		}
-		if i < len(times) && len(times[i]) > 1 {
-			timeStr = times[i][1]
-		}
-		if i < len(urls) && len(urls[i]) > 1 {
-			newsURL = urls[i][1]
-		}
-		if i < len(sources) && len(sources[i]) > 1 {
-			source = sources[i][1]
-		}
-
-		if title == "" || newsURL == "" {
-			continue
-		}
-
-		tag, tagClass := extractTag(title)
-
-		news = append(news, NewsItem{
-			Title:    title,
-			Source:   source,
-			Time:     timeStr,
-			URL:      newsURL,
-			Tag:      tag,
-			TagClass: tagClass,
-		})
-	}
-
-	if len(news) == 0 {
-		return nil, fmt.Errorf("no gold news from eastmoney")
-	}
-
-	return news, nil
-}
-
-// getFallbackNews 获取备用新闻数据
-func (s *NewsService) getFallbackNews() []NewsItem {
-	now := time.Now().Unix()
-	return []NewsItem{
-		{
-			Title:     "金价持续走高，投资者关注美联储动向",
-			Summary:   "市场关注美联储货币政策走向，黄金价格受到支撑",
-			Source:    "财经日报",
-			Time:      "30分钟前",
-			URL:       "https://finance.sina.com.cn/futuremarket/",
-			Tag:       "热点",
-			TagClass:  "hot",
-			Timestamp: now - 1800,
-		},
-		{
-			Title:     "央行持续增持黄金储备",
-			Summary:   "全球央行继续增持黄金，中国央行连续多月购金",
-			Source:    "经济观察报",
-			Time:      "1小时前",
-			URL:       "https://finance.sina.com.cn/money/nmetal/",
-			Tag:       "央行",
-			TagClass:  "bank",
-			Timestamp: now - 3600,
-		},
-		{
-			Title:     "黄金ETF资金流入增加",
-			Summary:   "近期黄金ETF持仓量上升，显示投资者看好后市",
-			Source:    "证券时报",
-			Time:      "2小时前",
-			URL:       "https://finance.sina.com.cn/money/nmetal/goldsilver/",
-			Tag:       "资金",
-			TagClass:  "money",
-			Timestamp: now - 7200,
-		},
-		{
-			Title:     "地缘政治风险支撑金价",
-			Summary:   "国际局势不确定性增加，避险需求推动黄金上涨",
-			Source:    "第一财经",
-			Time:      "3小时前",
-			URL:       "https://finance.sina.com.cn/world/",
-			Tag:       "避险",
-			TagClass:  "safe",
-			Timestamp: now - 10800,
-		},
-		{
-			Title:     "机构看好黄金长期走势",
-			Summary:   "多家机构发布报告看好黄金中长期表现",
-			Source:    "华尔街见闻",
-			Time:      "5小时前",
-			URL:       "https://finance.sina.com.cn/futuremarket/",
-			Tag:       "机构",
-			TagClass:  "org",
-			Timestamp: now - 18000,
-		},
-	}
-}
-
 // deduplicateNews 去重并限制数量
 func deduplicateNews(news []NewsItem, maxItems int) []NewsItem {
 	seen := make(map[string]bool)
@@ -346,9 +192,9 @@ func extractTag(content string) (string, string) {
 
 	// 关键词匹配
 	keywords := map[string][]string{
-		"热点": {"hot", "新高", "历史", "暴涨", "暴跌", "突破"},
+		"热点": {"热门", "新高", "历史", "暴涨", "暴跌", "突破"},
 		"央行": {"央行", "购金", "储备", "增持"},
-		"资金": {"etf", "资金", "流入", "流出", "持仓"},
+		"资金": {"基金", "资金", "流入", "流出", "持仓"},
 		"避险": {"避险", "地缘", "风险", "战争", "冲突"},
 		"机构": {"机构", "高盛", "摩根", "观点", "预测", "目标价"},
 		"需求": {"需求", "消费", "购金", "金饰", "印度", "中国"},

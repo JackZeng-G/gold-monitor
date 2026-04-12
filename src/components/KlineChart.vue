@@ -58,6 +58,8 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import * as echarts from 'echarts';
 import axios from 'axios';
+import { API_BASE } from '@/constants';
+import { fetchKlineData as fetchKlineDataFromApi } from '@/services/api';
 
 const props = defineProps({
   title: {
@@ -86,14 +88,7 @@ const props = defineProps({
   }
 });
 
-// 动态配置：开发环境用 localhost，生产环境用当前域名
-const getApiBase = () => {
-  if (import.meta.env.DEV) {
-    return 'http://localhost:8081/api';
-  }
-  return `${window.location.origin}/api`;
-};
-const API_BASE = getApiBase();
+const API_BASE_URL = API_BASE + '/api';
 
 const chartRef = ref(null);
 let chart = null;
@@ -196,21 +191,22 @@ const fetchKlineData = async (forceRefresh = false) => {
 
   loading.value = true;
   try {
-    let url;
+    let data;
+
     if (props.apiEndpoint) {
-      url = `${API_BASE}${props.apiEndpoint}?period=${currentPeriod.value}`;
+      // Custom endpoint - use axios directly
+      const url = `${API_BASE_URL}${props.apiEndpoint}?period=${currentPeriod.value}`;
+      const response = await axios.get(url, { timeout: 15000 });
+      if (response.data?.success && response.data?.data) {
+        data = response.data.data;
+      }
     } else {
-      url = `${API_BASE}/kline/symbol/${props.symbol}?period=${currentPeriod.value}`;
+      // Standard symbol-based endpoint - use centralized API
+      data = await fetchKlineDataFromApi(props.symbol, currentPeriod.value);
     }
 
-    const response = await axios.get(url, {
-      timeout: 15000
-    });
-
-    if (response.data.success && response.data.data) {
-      const data = response.data.data;
+    if (data) {
       klineData.value = data;
-      // 保存到缓存
       saveToCache(cacheKey, data);
       updateChart();
     }

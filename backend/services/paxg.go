@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"gold-monitor-backend/cache"
 	"gold-monitor-backend/models"
 )
 
@@ -18,10 +19,10 @@ const (
 
 // PaxgService PAXG (Paxos Gold) 服务
 type PaxgService struct {
-	client     *http.Client
-	prevClose  float64
-	cachedData *models.GoldPrice // 缓存上次成功获取的数据
-	mu         sync.RWMutex
+	client    *http.Client
+	prevClose float64
+	mu        sync.RWMutex
+	cache     *cache.Cache
 }
 
 // NewPaxgService 创建新的 PAXG 服务实例
@@ -30,6 +31,7 @@ func NewPaxgService() *PaxgService {
 		client: &http.Client{
 			Timeout: 3 * time.Second,
 		},
+		cache: cache.NewCache(),
 	}
 }
 
@@ -41,11 +43,11 @@ type binancePriceResponse struct {
 
 // gatePriceResponse Gate.io API 响应结构
 type gatePriceResponse struct {
-	CurrencyPair    string `json:"currency_pair"`
-	Last            string `json:"last"`
+	CurrencyPair     string `json:"currency_pair"`
+	Last             string `json:"last"`
 	ChangePercentage string `json:"change_percentage"`
-	High24h         string `json:"high_24h"`
-	Low24h          string `json:"low_24h"`
+	High24h          string `json:"high_24h"`
+	Low24h           string `json:"low_24h"`
 }
 
 // FetchPaxg 获取 PAXG (Paxos Gold) 价格
@@ -121,7 +123,7 @@ func (s *PaxgService) fetchFromGate(usdCnyRate float64) (*models.GoldPrice, erro
 	}
 
 	result := &models.GoldPrice{
-		Name:          "国际暗金",
+		Name:          "PAXG数字黄金",
 		Symbol:        "PAXG",
 		Current:       round(current, 2),
 		PrevClose:     round(prevClose, 2),
@@ -132,11 +134,11 @@ func (s *PaxgService) fetchFromGate(usdCnyRate float64) (*models.GoldPrice, erro
 		Timestamp:     time.Now(),
 	}
 
-	// 缓存成功获取的数据
+	// 缓存成功获取的数据（永不过期，用于fallback）
 	s.mu.Lock()
 	s.prevClose = prevClose
-	s.cachedData = result
 	s.mu.Unlock()
+	s.cache.Set("paxg_fallback", result, cache.NeverExpire)
 
 	return result, nil
 }
@@ -193,7 +195,7 @@ func (s *PaxgService) fetchFromBinance(usdCnyRate float64) (*models.GoldPrice, e
 	}
 
 	result := &models.GoldPrice{
-		Name:          "国际暗金",
+		Name:          "PAXG数字黄金",
 		Symbol:        "PAXG",
 		Current:       round(current, 2),
 		PrevClose:     round(prevClose, 2),
@@ -204,20 +206,23 @@ func (s *PaxgService) fetchFromBinance(usdCnyRate float64) (*models.GoldPrice, e
 		Timestamp:     time.Now(),
 	}
 
-	// 缓存成功获取的数据
+	// 缓存成功获取的数据（永不过期，用于fallback）
 	s.mu.Lock()
 	s.prevClose = prevClose
-	s.cachedData = result
 	s.mu.Unlock()
+	s.cache.Set("paxg_fallback", result, cache.NeverExpire)
 
 	return result, nil
 }
 
 // getCachedData 获取缓存的PAXG数据
 func (s *PaxgService) getCachedData() *models.GoldPrice {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.cachedData
+	if cached, ok := s.cache.Get("paxg_fallback"); ok {
+		if data, ok := cached.(*models.GoldPrice); ok {
+			return data
+		}
+	}
+	return nil
 }
 
 // parseFloatStr 解析价格字符串

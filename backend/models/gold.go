@@ -2,16 +2,6 @@ package models
 
 import "time"
 
-// NewsItem 新闻资讯项
-type NewsItem struct {
-	Title    string `json:"title"`
-	URL      string `json:"url"`
-	Source   string `json:"source"`
-	Time     string `json:"time"`
-	Tag      string `json:"tag,omitempty"`
-	TagClass string `json:"tagClass,omitempty"`
-}
-
 // GoldPrice 黄金价格数据模型
 type GoldPrice struct {
 	Name          string                   `json:"name"`

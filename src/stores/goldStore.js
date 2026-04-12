@@ -4,21 +4,12 @@ import { wsService } from '@/services/websocket';
 import { offlineStorage } from '@/services/offlineStorage';
 import { dataRecovery } from '@/services/dataRecovery';
 import { networkService } from '@/services/networkService';
-
-// 历史数据最大条数（约30分钟，5秒刷新一次 = 360条）
-const MAX_HISTORY_LENGTH = 360;
-// 历史数据有效期（30分钟，超过此时间的旧数据会被清理）
-const HISTORY_MAX_AGE = 30 * 60 * 1000;
+import { MAX_HISTORY_LENGTH, HISTORY_MAX_AGE, REFRESH_INTERVALS } from '@/constants';
 
 // 智能轮询配置
 const SMART_POLLING = {
-  // 轮询间隔（毫秒）
-  intervals: {
-    active: 5000,    // 活跃：数据频繁变化
-    normal: 10000,   // 正常：偶尔变化
-    calm: 20000,     // 平静：较少变化
-    inactive: 30000  // 不活跃：长时间无变化
-  },
+  // 轮询间隔（毫秒）- 使用统一常量
+  intervals: REFRESH_INTERVALS,
   // 模式切换阈值（毫秒）
   thresholds: {
     activeToNormal: 60000,   // 1分钟无变化 → 正常
@@ -481,14 +472,6 @@ export const useGoldStore = defineStore('gold', {
       setTimeout(() => {
         this.priceFlash[key] = false;
       }, 300);
-    },
-
-    /**
-     * 防抖保存 - 已废弃，改用 $subscribe 自动监听
-     */
-    debouncedSave() {
-      // 此方法保留但不再使用
-      // 自动保存已通过 $subscribe 实现
     },
 
     /**

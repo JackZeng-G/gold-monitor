@@ -75,6 +75,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import Skeleton from './Skeleton.vue';
+import { fetchNews } from '@/services/api';
 
 const props = defineProps({
   refreshInterval: {
@@ -87,28 +88,16 @@ const newsList = ref([]);
 const loading = ref(false);
 const error = ref(null);
 
-// 动态配置：开发环境用 localhost，生产环境用当前域名
-const getApiBase = () => {
-  if (import.meta.env.DEV) {
-    return 'http://localhost:8081';
-  }
-  return window.location.origin;
-};
-const API_BASE = getApiBase();
-
 // 加载资讯
 const loadNews = async () => {
   loading.value = true;
   error.value = null;
-
   try {
-    const response = await fetch(`${API_BASE}/api/news`);
-    const result = await response.json();
-
-    if (result.success && result.data) {
-      newsList.value = result.data;
+    const data = await fetchNews();
+    if (Array.isArray(data)) {
+      newsList.value = data;
     } else {
-      error.value = result.error || '获取资讯失败';
+      error.value = '获取资讯失败';
     }
   } catch (err) {
     console.error('Failed to load news:', err);

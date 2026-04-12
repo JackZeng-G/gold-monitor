@@ -2,6 +2,11 @@
  * 应用常量配置
  */
 
+// API 基础地址
+export const API_BASE = import.meta.env.DEV
+  ? 'http://localhost:8081'
+  : window.location.origin;
+
 // 单位换算
 export const OZ_TO_GRAM = 31.1035; // 1盎司 = 31.1035克
 export const DEFAULT_USD_CNY_RATE = 7.2; // 默认美元人民币汇率

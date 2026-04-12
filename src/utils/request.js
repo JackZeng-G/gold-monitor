@@ -4,19 +4,11 @@
  */
 
 import axios from 'axios';
-
-// 动态配置：开发环境用 localhost，生产环境用当前域名
-const getBaseURL = () => {
-  if (import.meta.env.DEV) {
-    return 'http://localhost:8081/api';
-  }
-  // 生产环境：使用当前页面的协议和主机名
-  return `${window.location.protocol}//${window.location.host}/api`;
-};
+import { API_BASE } from '@/constants';
 
 // 配置
 const CONFIG = {
-  baseURL: getBaseURL(),
+  baseURL: API_BASE + '/api',
   timeout: 10000,
   maxRetries: 3,
   retryDelay: 1000,

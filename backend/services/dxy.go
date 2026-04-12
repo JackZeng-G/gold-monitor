@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"gold-monitor-backend/cache"
 	"gold-monitor-backend/models"
 )
 
@@ -46,17 +47,17 @@ var dxyWeights = map[string]float64{
 
 // DxyService 美元指数服务
 type DxyService struct {
-	client     *http.Client
-	prevClose  float64
-	mu         sync.RWMutex
-	cachedData *models.ExchangeRate // 缓存上次成功获取的数据
-	cacheTime  time.Time            // 缓存时间
+	client    *http.Client
+	prevClose float64
+	mu        sync.RWMutex
+	cache     *cache.Cache
 }
 
 // NewDxyService 创建新的美元指数服务实例
 func NewDxyService() *DxyService {
 	return &DxyService{
 		client: &http.Client{Timeout: 5 * time.Second},
+		cache:  cache.NewCache(),
 	}
 }
 
@@ -197,19 +198,21 @@ func (s *DxyService) fetchAndCalculateFromSina() (*models.ExchangeRate, error) {
 		Timestamp:     time.Now(),
 	}
 
-	// 缓存成功获取的数据
+	// 缓存成功获取的数据（永不过期，用于fallback）
 	s.mu.Lock()
 	s.prevClose = dxy
-	s.cachedData = result
-	s.cacheTime = time.Now()
 	s.mu.Unlock()
+	s.cache.Set("dxy_fallback", result, cache.NeverExpire)
 
 	return result, nil
 }
 
 // getCachedData 获取缓存的DXY数据
 func (s *DxyService) getCachedData() *models.ExchangeRate {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.cachedData
+	if cached, ok := s.cache.Get("dxy_fallback"); ok {
+		if data, ok := cached.(*models.ExchangeRate); ok {
+			return data
+		}
+	}
+	return nil
 }

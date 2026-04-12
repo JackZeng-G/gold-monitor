@@ -24,7 +24,7 @@ func NewKlineHandler() *KlineHandler {
 func (h *KlineHandler) GetAu9999Kline(c *gin.Context) {
 	data, err := h.klineService.FetchAu9999Kline()
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   err.Error(),
 		})
@@ -54,7 +54,7 @@ func (h *KlineHandler) GetKlineBySymbol(c *gin.Context) {
 
 	data, err := h.klineService.FetchKlineBySymbolAndPeriod(symbol, period)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   err.Error(),
 		})
@@ -91,7 +91,7 @@ func (h *KlineHandler) GetUsFuturesKline(c *gin.Context) {
 	}
 
 	// 确实没有数据
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusInternalServerError, gin.H{
 		"success": false,
 		"error":   err.Error(),
 		"data":    nil,

@@ -134,17 +134,29 @@ func main() {
 
 	// 根目录静态文件
 	r.GET("/favicon.svg", func(c *gin.Context) {
-		data, _ := fs.ReadFile(staticFS, "favicon.svg")
+		data, err := fs.ReadFile(staticFS, "favicon.svg")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "favicon not found"})
+			return
+		}
 		c.Data(200, "image/svg+xml", data)
 	})
 	r.GET("/icons.svg", func(c *gin.Context) {
-		data, _ := fs.ReadFile(staticFS, "icons.svg")
+		data, err := fs.ReadFile(staticFS, "icons.svg")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "icons not found"})
+			return
+		}
 		c.Data(200, "image/svg+xml", data)
 	})
 
 	// 首页
 	r.GET("/", func(c *gin.Context) {
-		data, _ := fs.ReadFile(staticFS, "index.html")
+		data, err := fs.ReadFile(staticFS, "index.html")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "index.html not found"})
+			return
+		}
 		c.Data(200, "text/html; charset=utf-8", data)
 	})
 
@@ -152,10 +164,14 @@ func main() {
 	r.NoRoute(func(c *gin.Context) {
 		// 如果请求的是 API 路径但不存在，返回 404
 		if len(c.Request.URL.Path) >= 4 && c.Request.URL.Path[:4] == "/api" {
-			c.JSON(404, gin.H{"error": "not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 			return
 		}
-		data, _ := fs.ReadFile(staticFS, "index.html")
+		data, err := fs.ReadFile(staticFS, "index.html")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "index.html not found"})
+			return
+		}
 		c.Data(200, "text/html; charset=utf-8", data)
 	})
 

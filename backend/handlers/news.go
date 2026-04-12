@@ -2,29 +2,26 @@ package handlers
 
 import (
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"gold-monitor-backend/cache"
 	"gold-monitor-backend/services"
 )
 
 // NewsHandler 新闻处理器
 type NewsHandler struct {
 	newsService *services.NewsService
-	cache       *sync.Map
-	cacheTime   map[string]time.Time
+	cache       *cache.Cache
 	cacheTTL    time.Duration
-	mu          sync.RWMutex
 }
 
 // NewNewsHandler 创建新闻处理器
 func NewNewsHandler() *NewsHandler {
 	return &NewsHandler{
 		newsService: services.NewNewsService(),
-		cache:       &sync.Map{},
-		cacheTime:   make(map[string]time.Time),
+		cache:       cache.NewCache(),
 		cacheTTL:    5 * time.Minute, // 新闻缓存5分钟
 	}
 }
@@ -35,21 +32,14 @@ func (h *NewsHandler) GetNews(c *gin.Context) {
 	cacheKey := "gold_news"
 
 	// 检查缓存
-	h.mu.RLock()
-	if cacheTime, ok := h.cacheTime[cacheKey]; ok {
-		if time.Since(cacheTime) < h.cacheTTL {
-			if cached, ok := h.cache.Load(cacheKey); ok {
-				h.mu.RUnlock()
-				c.JSON(http.StatusOK, gin.H{
-					"success": true,
-					"data":    cached,
-					"cached":  true,
-				})
-				return
-			}
-		}
+	if cached, ok := h.cache.Get(cacheKey); ok {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data":    cached,
+			"cached":  true,
+		})
+		return
 	}
-	h.mu.RUnlock()
 
 	// 从新浪财经获取新闻
 	news, err := h.newsService.FetchGoldNews()
@@ -62,10 +52,7 @@ func (h *NewsHandler) GetNews(c *gin.Context) {
 	}
 
 	// 更新缓存
-	h.mu.Lock()
-	h.cache.Store(cacheKey, news)
-	h.cacheTime[cacheKey] = time.Now()
-	h.mu.Unlock()
+	h.cache.Set(cacheKey, news, h.cacheTTL)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

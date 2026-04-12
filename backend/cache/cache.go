@@ -5,10 +5,14 @@ import (
 	"time"
 )
 
+// NeverExpire 永不过期的TTL标记，用于fallback缓存
+const NeverExpire time.Duration = -1
+
 // CacheItem 缓存项
 type CacheItem struct {
 	Value      interface{}
 	Expiration time.Time
+	NeverExpire bool
 }
 
 // Cache 简单的内存缓存
@@ -19,21 +23,29 @@ type Cache struct {
 
 // NewCache 创建新的缓存实例
 func NewCache() *Cache {
-	cache := &Cache{
+	c := &Cache{
 		items: make(map[string]CacheItem),
 	}
 	// 启动清理定时器
-	go cache.cleanup()
-	return cache
+	go c.cleanup()
+	return c
 }
 
 // Set 设置缓存项
+// duration 为 NeverExpire 时永不过期
 func (c *Cache) Set(key string, value interface{}, duration time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.items[key] = CacheItem{
-		Value:      value,
-		Expiration: time.Now().Add(duration),
+	if duration == NeverExpire {
+		c.items[key] = CacheItem{
+			Value:       value,
+			NeverExpire: true,
+		}
+	} else {
+		c.items[key] = CacheItem{
+			Value:      value,
+			Expiration: time.Now().Add(duration),
+		}
 	}
 }
 
@@ -44,6 +56,9 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 	item, found := c.items[key]
 	if !found {
 		return nil, false
+	}
+	if item.NeverExpire {
+		return item.Value, true
 	}
 	if time.Now().After(item.Expiration) {
 		return nil, false
@@ -71,7 +86,7 @@ func (c *Cache) cleanup() {
 		time.Sleep(1 * time.Minute)
 		c.mu.Lock()
 		for key, item := range c.items {
-			if time.Now().After(item.Expiration) {
+			if !item.NeverExpire && time.Now().After(item.Expiration) {
 				delete(c.items, key)
 			}
 		}

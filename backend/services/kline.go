@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
+
+	"gold-monitor-backend/cache"
 )
 
 // KlineData K线数据结构
@@ -24,12 +25,8 @@ type KlineData struct {
 
 // KlineService K线数据服务
 type KlineService struct {
-	client     *http.Client
-	cachedData []KlineData // 缓存上次成功获取的数据
-	mu         struct {
-		sync.RWMutex
-		cacheTime time.Time
-	}
+	client *http.Client
+	cache  *cache.Cache
 }
 
 // NewKlineService 创建K线服务
@@ -38,6 +35,7 @@ func NewKlineService() *KlineService {
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
+		cache: cache.NewCache(),
 	}
 }
 
@@ -354,17 +352,17 @@ func (s *KlineService) FetchKlineBySymbolAndPeriod(symbol, period string) ([]Kli
 	return s.FetchDailyKline(symbol)
 }
 
-// cacheResult 缓存K线数据
+// cacheResult 缓存K线数据（永不过期，用于fallback）
 func (s *KlineService) cacheResult(data []KlineData) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.cachedData = data
-	s.mu.cacheTime = time.Now()
+	s.cache.Set("kline_fallback", data, cache.NeverExpire)
 }
 
 // getCachedData 获取缓存的K线数据
 func (s *KlineService) getCachedData() []KlineData {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.cachedData
+	if cached, ok := s.cache.Get("kline_fallback"); ok {
+		if data, ok := cached.([]KlineData); ok {
+			return data
+		}
+	}
+	return nil
 }

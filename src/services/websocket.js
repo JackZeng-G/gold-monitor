@@ -280,22 +280,6 @@ class WebSocketService {
     this.missedHeartbeats = 0;
   }
 
-  // 设置网络状态监听
-  setupNetworkListener(callback) {
-    // 动态导入 networkService 避免循环依赖
-    import('./networkService.js').then(({ networkService }) => {
-      this.networkUnsubscribe = networkService.subscribe((status) => {
-        if (status.isOnline && status.wasOffline) {
-          console.log('[WS] Network is back online, triggering reconnect');
-          this.reconnectNow();
-        } else if (!status.isOnline && this.connectionState === 'connected') {
-          console.log('[WS] Network went offline');
-        }
-        if (callback) callback(status);
-      });
-    });
-  }
-
   // 清理网络监听
   cleanupNetworkListener() {
     if (this.networkUnsubscribe) {
