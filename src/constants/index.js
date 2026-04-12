@@ -27,7 +27,7 @@ export const MAX_HISTORY_LENGTH = 360; // 约30分钟，5秒刷新一次
 export const HISTORY_MAX_AGE = 30 * 60 * 1000; // 30分钟
 
 // 不显示涨跌的数据类型
-export const NO_CHANGE_DISPLAY_KEYS = ['paxg', 'dxy'];
+export const NO_CHANGE_DISPLAY_KEYS = [];
 
 // Toast 自动消失时间（毫秒）
 export const TOAST_AUTO_DISMISS = 5000;

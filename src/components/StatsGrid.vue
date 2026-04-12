@@ -101,13 +101,13 @@ const stats = computed(() => {
     },
     {
       key: 'paxg',
-      label: '国际暗金',
+      label: '数字黄金',
       symbol: 'PAXG',
       cnyPrice: (paxg.current * rate).toFixed(2),
       usdPrice: paxg.current,
-      change: 0,
-      percent: 0,
-      trend: 'flat',
+      change: paxg.change || 0,
+      percent: paxg.changePercent || 0,
+      trend: getTrend(paxg.change),
       isRate: false,
       flash: priceFlash.paxg
     },
@@ -129,9 +129,9 @@ const stats = computed(() => {
       symbol: 'DXY',
       cnyPrice: dxy.current,
       usdPrice: null,
-      change: 0,
-      percent: 0,
-      trend: 'flat',
+      change: dxy.change || 0,
+      percent: dxy.changePercent || 0,
+      trend: getTrend(dxy.change),
       isRate: true,
       flash: priceFlash.dxy
     }
@@ -140,7 +140,7 @@ const stats = computed(() => {
   // 添加 showChange 标志
   return items.map(item => ({
     ...item,
-    showChange: !NO_CHANGE_DISPLAY_KEYS.includes(item.key)
+    showChange: true
   }));
 });
 </script>
