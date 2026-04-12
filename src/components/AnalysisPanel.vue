@@ -105,9 +105,11 @@ import {
   calculateMACD,
   calculateKDJ,
   calculateWilliamsR,
-  calculateRSI as calculateRSIFromUtils,
+  calculateRSI,
   calculateBollingerBands,
-  calculateATR as calculateATRFromUtils,
+  calculateATR,
+  calculateEMA,
+  calculateSMA,
   analyzeTechnicalIndicators
 } from '@/utils/technicalIndicators';
 
@@ -149,13 +151,6 @@ const technicalIndicators = ref(null);
 
 // ========== 技术指标计算 ==========
 
-// 计算移动平均线
-const calculateMA = (prices, period) => {
-  if (prices.length < period) return null;
-  const slice = prices.slice(-period);
-  return slice.reduce((a, b) => a + b, 0) / period;
-};
-
 // 计算标准差（波动率）
 const calculateStdDev = (prices, period) => {
   if (prices.length < period) return 0;
@@ -163,22 +158,6 @@ const calculateStdDev = (prices, period) => {
   const avg = slice.reduce((a, b) => a + b, 0) / period;
   const squaredDiffs = slice.map(p => Math.pow(p - avg, 2));
   return Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / period);
-};
-
-// 计算RSI (相对强弱指标)
-const calculateRSI = (prices, period = 14) => {
-  if (prices.length < period + 1) return 50;
-
-  let gains = 0, losses = 0;
-  for (let i = prices.length - period; i < prices.length; i++) {
-    const change = prices[i] - prices[i - 1];
-    if (change > 0) gains += change;
-    else losses -= change;
-  }
-
-  if (losses === 0) return 100;
-  const rs = gains / losses;
-  return 100 - (100 / (1 + rs));
 };
 
 // 计算动量指标
@@ -193,7 +172,7 @@ const calculateMomentum = (prices, period = 5) => {
 const calculateBollingerPosition = (currentPrice, prices, period = 20) => {
   if (prices.length < period) return 0.5;
 
-  const ma = calculateMA(prices, period);
+  const ma = calculateSMA(prices, period);
   const stdDev = calculateStdDev(prices, period);
 
   if (stdDev === 0) return 0.5;
@@ -244,39 +223,6 @@ const calculatePriceSpread = () => {
   return { spread: spreadPercent, status };
 };
 
-// 计算 ATR (Average True Range) - 真实波动幅度
-const calculateATR = (prices, period = 14) => {
-  if (prices.length < 2) return prices[0] * 0.008 || 5;
-
-  const tr = [];
-  for (let i = 1; i < prices.length; i++) {
-    const prevClose = prices[i - 1];
-    const currPrice = prices[i];
-    // True Range = max(H-L, |H-PrevC|, |L-PrevC|)
-    const high = currPrice > prevClose ? currPrice : prevClose;
-    const low = currPrice < prevClose ? currPrice : prevClose;
-    tr.push(high - low);
-  }
-
-  const lookback = Math.min(period, tr.length);
-  const sum = tr.slice(-lookback).reduce((a, b) => a + b, 0);
-  return sum / lookback || prices[prices.length - 1] * 0.005;
-};
-
-// 计算 EMA (指数移动平均)
-const calculateEMA = (prices, period) => {
-  if (prices.length < period) return calculateMA(prices, prices.length);
-
-  const k = 2 / (period + 1);
-  let ema = calculateMA(prices.slice(0, period), period);
-
-  for (let i = period; i < prices.length; i++) {
-    ema = prices[i] * k + ema * (1 - k);
-  }
-
-  return ema;
-};
-
 // 计算数据哈希
 const calculateDataHash = () => {
   const au = store.au9999;
@@ -301,7 +247,7 @@ const analyzeShortTerm = (prices = null) => {
   // ===== 技术面分析 (70%权重) =====
 
   // 1. RSI指标 (权重15%)
-  const rsi = calculateRSI(priceArray, 14);
+  const rsi = calculateRSI(priceArray, 14).value;
   if (rsi !== null) {
     if (rsi > 70) {
       score -= 10;
@@ -322,8 +268,8 @@ const analyzeShortTerm = (prices = null) => {
 
   // 2. 移动平均线交叉 (权重20%)
   if (priceArray.length >= 10) {
-    const ma5 = calculateMA(priceArray, 5);
-    const ma10 = calculateMA(priceArray, 10);
+    const ma5 = calculateSMA(priceArray, 5);
+    const ma10 = calculateSMA(priceArray, 10);
     const currentPrice = au.current;
 
     if (ma5 && ma10) {
@@ -590,8 +536,8 @@ const analyzeLongTerm = () => {
 
   // 4. 长期趋势 (权重15%)
   if (prices.length >= 15) {
-    const ma5 = calculateMA(prices, 5);
-    const ma15 = calculateMA(prices, 15);
+    const ma5 = calculateSMA(prices, 5);
+    const ma15 = calculateSMA(prices, 15);
     if (ma5 && ma15) {
       if (ma5 > ma15 * 1.005) {
         score += 8;
