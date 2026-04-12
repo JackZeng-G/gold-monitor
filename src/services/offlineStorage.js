@@ -168,7 +168,13 @@ class OfflineStorage {
                 cursor.continue();
               }
             };
+            cursorReq.onerror = () => {
+              console.warn('[OfflineStorage] Cleanup cursor failed');
+            };
           }
+        };
+        countReq.onerror = () => {
+          console.warn('[OfflineStorage] Count request failed, skipping cleanup');
         };
 
         transaction.oncomplete = () => resolve();
@@ -223,35 +229,41 @@ class OfflineStorage {
     });
   }
 
-  // 获取所有数据源的最新数据
+  // 获取所有数据源的最新数据 - 使用游标优化
   async getLatestPrices() {
     await this.initPromise;
 
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(STORE_NAME, 'readonly');
       const store = transaction.objectStore(STORE_NAME);
+      const index = store.index('source');
 
-      const getAllRequest = store.getAll();
+      const latestData = {};
+      const sourceTimestamps = {};
 
-      getAllRequest.onsuccess = (event) => {
-        const records = event.target.result || [];
-        const latestData = {};
-        const sourceTimestamps = {};
+      // 使用游标遍历所有记录
+      const cursorReq = index.openCursor();
 
-        for (const record of records) {
-          // 解压数据
-          let data = record;
-          if (record.compressed && record.data) {
-            const decompressed = this.decompressData(record);
-            if (decompressed) {
-              data = { ...record, ...decompressed };
+      cursorReq.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          const record = cursor.value;
+          const source = record.source;
+
+          // 只保留该 source 的最新记录
+          if (!sourceTimestamps[source] || record.timestamp > sourceTimestamps[source]) {
+            sourceTimestamps[source] = record.timestamp;
+
+            // 解压数据
+            let data = record;
+            if (record.compressed && record.data) {
+              const decompressed = this.decompressData(record);
+              if (decompressed) {
+                data = { ...record, ...decompressed };
+              }
             }
-          }
 
-          if (!sourceTimestamps[record.source] ||
-              record.timestamp > sourceTimestamps[record.source]) {
-            sourceTimestamps[record.source] = record.timestamp;
-            latestData[record.source] = {
+            latestData[source] = {
               price: data.price,
               timestamp: data.timestamp,
               prevClose: data.prevClose,
@@ -260,13 +272,15 @@ class OfflineStorage {
               currency: data.currency
             };
           }
+          cursor.continue();
+        } else {
+          // 游标结束
+          this.stats.hits++;
+          resolve(latestData);
         }
-
-        this.stats.hits++;
-        resolve(latestData);
       };
 
-      getAllRequest.onerror = () => {
+      cursorReq.onerror = () => {
         this.stats.misses++;
         reject(new Error('Failed to get records'));
       };
