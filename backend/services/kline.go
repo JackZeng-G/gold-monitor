@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 )
@@ -205,7 +206,7 @@ func (s *KlineService) fetchEastMoneyKlineWithPeriod(period string) ([]KlineData
 	result := make([]KlineData, 0, len(eastMoneyResp.Data.Klines))
 	for _, klineStr := range eastMoneyResp.Data.Klines {
 		// 格式: "时间,开盘,收盘,最高,最低,成交量,持仓量"
-		parts := regexp.MustCompile(`,`).Split(klineStr, -1)
+		parts := strings.Split(klineStr, ",")
 		if len(parts) < 6 {
 			continue
 		}
