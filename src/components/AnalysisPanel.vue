@@ -644,23 +644,24 @@ const performAnalysis = (force = false) => {
   const prices = history.map(h => h.price);
   const currentPrice = store.au9999.current;
 
-  // 计算综合技术指标
+  // 执行分析（传入 prices 避免重复提取）
+  analyzeShortTerm(prices);
+  analyzeMidTerm(prices);
+  analyzeLongTerm();
+
+  // 计算综合技术指标并追加信号到短线分析（追加而非替换）
   if (prices.length >= 10) {
     const analysis = analyzeTechnicalIndicators(prices, currentPrice);
     technicalIndicators.value = analysis.indicators;
-    // analysis.score 计算保留，但不再显示
 
-    // 将技术指标信号合并到短线分析中
-    if (analysis.signals.length > 0) {
-      // 在短线分析前添加技术指标信号
-      const existingSignals = shortAnalysis.value || [];
-      shortAnalysis.value = [...analysis.signals.slice(0, 3), ...existingSignals.slice(0, 5)];
+    if (analysis.signals.length > 0 && shortAnalysis.value.length > 0) {
+      const existingTexts = shortAnalysis.value.map(i => i.text);
+      const newSignals = analysis.signals
+        .filter(s => !existingTexts.includes(s.text))
+        .slice(0, 3);
+      shortAnalysis.value = [...shortAnalysis.value, ...newSignals];
     }
   }
-
-  analyzeShortTerm();
-  analyzeMidTerm();
-  analyzeLongTerm();
 };
 
 // 监听数据变化
