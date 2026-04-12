@@ -121,74 +121,58 @@ class OfflineStorage {
         const transaction = this.db.transaction(STORE_NAME, 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
 
-        const getAllRequest = store.getAll();
-
-        getAllRequest.onsuccess = (event) => {
-          let records = event.target.result || [];
-
-          // 过滤掉该数据源的旧记录
-          records = records.filter(r => r.source !== source);
-
-          // 准备新记录
-          const newRecord = {
-            id: `${source}_${Date.now()}`,
-            source,
-            timestamp: Date.now(),
-            compressed: false
-          };
-
-          // 尝试压缩数据
-          const rawData = {
-            price: data.current,
-            prevClose: data.prevClose,
-            change: data.change,
-            changePercent: data.changePercent,
-            currency: data.currency
-          };
-
-          const { data: compressedData, compressed } = this.compressData(rawData);
-          newRecord.data = compressedData;
-          newRecord.compressed = compressed;
-
-          // 如果未压缩，直接存储字段以便兼容
-          if (!compressed) {
-            newRecord.price = data.current;
-            newRecord.prevClose = data.prevClose;
-            newRecord.change = data.change;
-            newRecord.changePercent = data.changePercent;
-            newRecord.currency = data.currency;
-          }
-
-          records.push(newRecord);
-
-          // 限制记录数量
-          if (records.length > MAX_RECORDS_PER_SOURCE * 6) {
-            records.sort((a, b) => a.timestamp - b.timestamp);
-            records = records.slice(-MAX_RECORDS_PER_SOURCE * 6);
-          }
-
-          // 批量保存
-          const clearRequest = store.clear();
-          clearRequest.onsuccess = () => {
-            let saved = 0;
-            for (const record of records) {
-              const putRequest = store.put(record);
-              putRequest.onsuccess = () => {
-                saved++;
-                if (saved === records.length) {
-                  resolve();
-                }
-              };
-              putRequest.onerror = () => reject(new Error('Failed to save record'));
-            }
-            if (records.length === 0) {
-              resolve();
-            }
-          };
-          clearRequest.onerror = () => reject(new Error('Failed to clear store'));
+        const newRecord = {
+          id: `${source}_${Date.now()}`,
+          source,
+          timestamp: Date.now(),
+          compressed: false
         };
 
-        getAllRequest.onerror = () => reject(new Error('Failed to get records'));
+        const rawData = {
+          price: data.current,
+          prevClose: data.prevClose,
+          change: data.change,
+          changePercent: data.changePercent,
+          currency: data.currency
+        };
+
+        const { data: compressedData, compressed } = this.compressData(rawData);
+        newRecord.data = compressedData;
+        newRecord.compressed = compressed;
+
+        if (!compressed) {
+          newRecord.price = data.current;
+          newRecord.prevClose = data.prevClose;
+          newRecord.change = data.change;
+          newRecord.changePercent = data.changePercent;
+          newRecord.currency = data.currency;
+        }
+
+        store.put(newRecord);
+
+        // Cleanup old records for this source using cursor
+        const index = store.index('source');
+        let count = 0;
+        const countReq = index.count(IDBKeyRange.only(source));
+        countReq.onsuccess = () => {
+          const total = countReq.result;
+          if (total > MAX_RECORDS_PER_SOURCE) {
+            const toDelete = total - MAX_RECORDS_PER_SOURCE;
+            let deleted = 0;
+            const cursorReq = index.openCursor(IDBKeyRange.only(source));
+            cursorReq.onsuccess = (event) => {
+              const cursor = event.target.result;
+              if (cursor && deleted < toDelete) {
+                cursor.delete();
+                deleted++;
+                cursor.continue();
+              }
+            };
+          }
+        };
+
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(new Error('Transaction failed'));
       } catch (error) {
         reject(error);
       }
@@ -202,38 +186,37 @@ class OfflineStorage {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(STORE_NAME, 'readonly');
       const store = transaction.objectStore(STORE_NAME);
+      const index = store.index('source');
 
-      const getAllRequest = store.getAll();
+      const now = Date.now();
+      const minTimestamp = now - DATA_EXPIRY;
+      const records = [];
 
-      getAllRequest.onsuccess = (event) => {
-        const allRecords = event.target.result || [];
-        const now = Date.now();
+      const cursorReq = index.openCursor(IDBKeyRange.only(source));
 
-        // 过滤：同一数据源 + 未过期
-        const records = allRecords.filter(record => {
-          return record.source === source && (now - record.timestamp) < DATA_EXPIRY;
-        });
-
-        // 解压数据
-        const decompressedRecords = records.map(record => {
-          if (record.compressed && record.data) {
-            const data = this.decompressData(record);
-            if (data) {
-              this.stats.hits++;
-              return { ...record, ...data };
+      cursorReq.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          const record = cursor.value;
+          if (record.timestamp >= minTimestamp) {
+            if (record.compressed && record.data) {
+              const data = this.decompressData(record);
+              if (data) {
+                records.push({ ...record, ...data });
+              }
+            } else {
+              records.push(record);
             }
           }
+          cursor.continue();
+        } else {
+          records.sort((a, b) => a.timestamp - b.timestamp);
           this.stats.hits++;
-          return record;
-        });
-
-        // 按时间排序
-        decompressedRecords.sort((a, b) => a.timestamp - b.timestamp);
-
-        resolve(decompressedRecords.slice(-limit));
+          resolve(records.slice(-limit));
+        }
       };
 
-      getAllRequest.onerror = () => {
+      cursorReq.onerror = () => {
         this.stats.misses++;
         reject(new Error('Failed to get records'));
       };
@@ -297,26 +280,28 @@ class OfflineStorage {
     return new Promise((resolve, reject) => {
       const transaction = this.db.transaction(STORE_NAME, 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
+      const index = store.index('timestamp');
 
-      const getAllRequest = store.getAll();
+      const expiryThreshold = Date.now() - DATA_EXPIRY;
+      let expiredCount = 0;
 
-      getAllRequest.onsuccess = (event) => {
-        const records = event.target.result || [];
-        const now = Date.now();
-        let expiredCount = 0;
+      const cursorReq = index.openCursor(IDBKeyRange.upperBound(expiryThreshold));
 
-        for (const record of records) {
-          if (now - record.timestamp > DATA_EXPIRY) {
-            store.delete(record.id);
-            expiredCount++;
+      cursorReq.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          cursor.delete();
+          expiredCount++;
+          cursor.continue();
+        } else {
+          if (expiredCount > 0) {
+            console.log(`[OfflineStorage] Cleaned ${expiredCount} expired records`);
           }
+          resolve(expiredCount);
         }
-
-        console.log(`[OfflineStorage] Cleaned ${expiredCount} expired records`);
-        resolve(expiredCount);
       };
 
-      getAllRequest.onerror = () => reject(new Error('Failed to get records'));
+      cursorReq.onerror = () => reject(new Error('Failed to clean expired data'));
     });
   }
 
