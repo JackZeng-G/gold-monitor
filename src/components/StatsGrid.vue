@@ -39,7 +39,7 @@
 import { computed } from 'vue';
 import IconArrow from './IconArrow.vue';
 import { formatPrice, formatChange, formatPercent, getTrend } from '@/utils/format';
-import { OZ_TO_GRAM, DEFAULT_USD_CNY_RATE, NO_CHANGE_DISPLAY_KEYS } from '@/constants';
+import { OZ_TO_GRAM, DEFAULT_USD_CNY_RATE } from '@/constants';
 
 const props = defineProps({
   au9999: { type: Object, required: true },

@@ -628,16 +628,9 @@ export const useGoldStore = defineStore('gold', {
         // 更新同步状态
         if (status.connected) {
           this.updateSyncStatus('connected');
-          // 清理过期待处理的更新
-          if (dataRecovery.getRecoveryStatus().pendingCount === 0) {
-            dataRecovery.recordSync();
-          }
+          dataRecovery.recordSync();
         } else if (status.reconnecting) {
           this.updateSyncStatus('connecting');
-          // 记录待处理的更新
-          dataRecovery.savePendingUpdate('connection_lost', {
-            timestamp: Date.now()
-          });
         } else {
           this.updateSyncStatus('error');
           // 如果 WebSocket 断开，启用 HTTP 轮询作为备份
@@ -683,10 +676,6 @@ export const useGoldStore = defineStore('gold', {
           // 网络断开
           console.log('[Store] Network disconnected');
           this.updateSyncStatus('offline');
-          // 保存待处理状态
-          dataRecovery.savePendingUpdate('network_offline', {
-            timestamp: Date.now()
-          });
         }
       });
     },
