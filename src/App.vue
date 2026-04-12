@@ -4,7 +4,6 @@
     <HeaderBar :data-source="store.dataSource">
       <template #actions>
         <SyncIndicator
-          ref="syncIndicatorRef"
           :show-details="true"
           :show-stats="true"
           :connected="store.wsConnected"
@@ -86,7 +85,6 @@ import ErrorToast from '@/components/ErrorToast.vue';
 
 const store = useGoldStore();
 const isDataLoaded = ref(false);
-const syncIndicatorRef = ref(null);
 
 // 监听数据加载状态
 watch(() => store.lastUpdate, (val) => {
