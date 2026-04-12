@@ -305,13 +305,6 @@ const stats = computed(() => {
     line-height: 1;
     color: $color-text;
     letter-spacing: -1px;
-
-    &::before {
-      content: '¥';
-      font-size: 16px;
-      margin-right: 2px;
-      opacity: 0.6;
-    }
   }
 
   .price-sub {
@@ -390,10 +383,6 @@ const stats = computed(() => {
 
   .stat-price .price-main {
     font-size: 22px;
-
-    &::before {
-      font-size: 12px;
-    }
   }
 
   .stat-price .price-sub {
