@@ -228,6 +228,7 @@ func (s *SinaService) FetchAll() (*models.AllPricesResponse, error) {
 	}
 
 	results := make(chan result, 6)
+	rateChan := make(chan float64, 1)
 
 	// 国内源（新浪）- 优先快速获取
 	go func() {
@@ -247,6 +248,9 @@ func (s *SinaService) FetchAll() (*models.AllPricesResponse, error) {
 
 	go func() {
 		data, err := s.FetchUsdCny()
+		if err == nil && data != nil && data.Current > 0 {
+			rateChan <- data.Current
+		}
 		results <- result{"usdCny", data, err}
 	}()
 
@@ -258,10 +262,13 @@ func (s *SinaService) FetchAll() (*models.AllPricesResponse, error) {
 	}()
 
 	go func() {
-		// 先获取汇率
+		// 从 USDCNY goroutine 获取汇率，避免重复请求
 		rate := 6.9
-		if r, err := s.FetchUsdCny(); err == nil && r.Current > 0 {
-			rate = r.Current
+		select {
+		case r := <-rateChan:
+			rate = r
+		case <-time.After(2 * time.Second):
+			// timeout, use default
 		}
 		data, err := s.paxgService.FetchPaxg(rate)
 		// FetchPaxg 内部已经有缓存fallback
