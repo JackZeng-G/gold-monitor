@@ -115,17 +115,30 @@ func (h *WSHub) Run() {
 
 		case message := <-h.broadcast:
 			h.mu.RLock()
+			pendingDeletes := make([]*WSClient, 0)
 			for client := range h.clients {
 				select {
 				case client.send <- message:
 					client.LastMsg = time.Now()
 				default:
-					// Client buffer full, close connection
-					close(client.send)
-					delete(h.clients, client)
+					// Client buffer full, collect for cleanup (can't modify under RLock)
+					pendingDeletes = append(pendingDeletes, client)
 				}
 			}
 			h.mu.RUnlock()
+
+			// Now cleanup under full Lock
+			if len(pendingDeletes) > 0 {
+				h.mu.Lock()
+				for _, client := range pendingDeletes {
+					if _, ok := h.clients[client]; ok {
+						close(client.send)
+						delete(h.clients, client)
+					}
+				}
+				h.mu.Unlock()
+				log.Printf("WebSocket: cleaned %d stale clients", len(pendingDeletes))
+			}
 
 		case <-ticker.C:
 			// Cleanup inactive clients (no message sent in 2 minutes)
