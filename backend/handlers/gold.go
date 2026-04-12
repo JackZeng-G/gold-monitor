@@ -19,92 +19,97 @@ type HistoryPoint struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// HistoryStore 历史数据存储
+// RingBuffer 环形缓冲区
+type RingBuffer struct {
+	data    []HistoryPoint
+	head    int // 写入位置
+	count   int // 当前数量
+	maxSize int
+	mu      sync.RWMutex
+}
+
+// NewRingBuffer 创建环形缓冲区
+func NewRingBuffer(maxSize int) *RingBuffer {
+	return &RingBuffer{
+		data:    make([]HistoryPoint, maxSize),
+		head:    0,
+		count:   0,
+		maxSize: maxSize,
+	}
+}
+
+// Add 添加数据点
+func (rb *RingBuffer) Add(price float64, timestamp time.Time) {
+	rb.mu.Lock()
+	defer rb.mu.Unlock()
+
+	rb.data[rb.head] = HistoryPoint{Price: price, Timestamp: timestamp}
+	rb.head = (rb.head + 1) % rb.maxSize
+	if rb.count < rb.maxSize {
+		rb.count++
+	}
+}
+
+// GetAll 获取所有数据（有序）
+func (rb *RingBuffer) GetAll() []HistoryPoint {
+	rb.mu.RLock()
+	defer rb.mu.RUnlock()
+
+	if rb.count == 0 {
+		return nil
+	}
+
+	result := make([]HistoryPoint, rb.count)
+	start := (rb.head - rb.count + rb.maxSize) % rb.maxSize
+	for i := 0; i < rb.count; i++ {
+		idx := (start + i) % rb.maxSize
+		result[i] = rb.data[idx]
+	}
+	return result
+}
+
+// HistoryStore 历史数据存储（使用环形缓冲区）
 type HistoryStore struct {
-	mu          sync.RWMutex
-	Au9999      []HistoryPoint `json:"au9999"`
-	UsFutures   []HistoryPoint `json:"usFutures"`
-	UkFutures   []HistoryPoint `json:"ukFutures"`
-	UsdCny      []HistoryPoint `json:"usdCny"`
-	Dxy         []HistoryPoint `json:"dxy"`
-	Paxg        []HistoryPoint `json:"paxg"`
-	MaxPoints   int            `json:"-"` // 最大存储点数
+	buffers map[string]*RingBuffer
+	maxSize int
+	mu      sync.RWMutex
 }
 
 // NewHistoryStore 创建历史存储
 func NewHistoryStore(maxPoints int) *HistoryStore {
 	return &HistoryStore{
-		Au9999:    make([]HistoryPoint, 0),
-		UsFutures: make([]HistoryPoint, 0),
-		UkFutures: make([]HistoryPoint, 0),
-		UsdCny:    make([]HistoryPoint, 0),
-		Dxy:       make([]HistoryPoint, 0),
-		Paxg:      make([]HistoryPoint, 0),
-		MaxPoints: maxPoints,
+		buffers: make(map[string]*RingBuffer),
+		maxSize: maxPoints,
 	}
+}
+
+// getOrCreateBuffer 获取或创建缓冲区
+func (h *HistoryStore) getOrCreateBuffer(key string) *RingBuffer {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if h.buffers[key] == nil {
+		h.buffers[key] = NewRingBuffer(h.maxSize)
+	}
+	return h.buffers[key]
 }
 
 // AddPoint 添加数据点
 func (h *HistoryStore) AddPoint(key string, price float64, timestamp time.Time) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	point := HistoryPoint{Price: price, Timestamp: timestamp}
-
-	switch key {
-	case "au9999":
-		h.Au9999 = append(h.Au9999, point)
-		if len(h.Au9999) > h.MaxPoints {
-			h.Au9999 = h.Au9999[len(h.Au9999)-h.MaxPoints:]
-		}
-	case "usFutures":
-		h.UsFutures = append(h.UsFutures, point)
-		if len(h.UsFutures) > h.MaxPoints {
-			h.UsFutures = h.UsFutures[len(h.UsFutures)-h.MaxPoints:]
-		}
-	case "ukFutures":
-		h.UkFutures = append(h.UkFutures, point)
-		if len(h.UkFutures) > h.MaxPoints {
-			h.UkFutures = h.UkFutures[len(h.UkFutures)-h.MaxPoints:]
-		}
-	case "usdCny":
-		h.UsdCny = append(h.UsdCny, point)
-		if len(h.UsdCny) > h.MaxPoints {
-			h.UsdCny = h.UsdCny[len(h.UsdCny)-h.MaxPoints:]
-		}
-	case "dxy":
-		h.Dxy = append(h.Dxy, point)
-		if len(h.Dxy) > h.MaxPoints {
-			h.Dxy = h.Dxy[len(h.Dxy)-h.MaxPoints:]
-		}
-	case "paxg":
-		h.Paxg = append(h.Paxg, point)
-		if len(h.Paxg) > h.MaxPoints {
-			h.Paxg = h.Paxg[len(h.Paxg)-h.MaxPoints:]
-		}
-	}
+	buffer := h.getOrCreateBuffer(key)
+	buffer.Add(price, timestamp)
 }
 
 // GetHistory 获取历史数据
 func (h *HistoryStore) GetHistory(key string) []HistoryPoint {
 	h.mu.RLock()
-	defer h.mu.RUnlock()
+	buffer := h.buffers[key]
+	h.mu.RUnlock()
 
-	switch key {
-	case "au9999":
-		return h.Au9999
-	case "usFutures":
-		return h.UsFutures
-	case "ukFutures":
-		return h.UkFutures
-	case "usdCny":
-		return h.UsdCny
-	case "dxy":
-		return h.Dxy
-	case "paxg":
-		return h.Paxg
+	if buffer == nil {
+		return nil
 	}
-	return nil
+	return buffer.GetAll()
 }
 
 // GoldHandler 黄金价格处理器
