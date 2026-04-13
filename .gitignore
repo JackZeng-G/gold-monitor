@@ -22,3 +22,17 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude local settings
+.claude/
+
+# Claude Code superpowers (plans/specs contain internal thoughts)
+docs/superpowers/
+
+# Backend build artifacts
+backend/*.exe
+backend/gold-monitor*
+!backend/gold-monitor-backend/
+
+# Embedded static assets (rebuilt from dist)
+backend/static/assets/
