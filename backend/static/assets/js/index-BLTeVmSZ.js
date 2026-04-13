@@ -1,6 +1,6 @@
 import { A as extend, B as isSymbol, C as watch, D as unref, E as ref, F as isModelListener, H as normalizeStyle, I as isObject, L as isOn, M as includeBooleanAttr, N as isArray, O as camelize, P as isFunction, R as isSpecialBooleanAttr, S as resolveDirective, T as withDirectives, U as toDisplayString, V as normalizeClass, W as toNumber, _ as onMounted, a as Fragment, b as renderList, c as createBaseVNode, d as createElementBlock, f as createRenderer, g as h, h as createVNode, i as BaseTransitionPropsValidators, j as hyphenate, k as capitalize, l as createBlock, m as createTextVNode, n as defineStore, o as callWithAsyncErrorHandling, p as createStaticVNode, r as BaseTransition, s as computed, t as createPinia, u as createCommentVNode, v as onUnmounted, w as withCtx, x as renderSlot, y as openBlock, z as isString } from "./vue-vendor-Cm6xcTrQ.js";
 import { t as axios } from "./utils-BNV70U-t.js";
-import { t as init } from "./charts-DBWprEAO.js";
+import { t as init } from "./charts-DcU-o_rA.js";
 //#region \0vite/modulepreload-polyfill.js
 (function polyfill() {
 	const relList = document.createElement("link").relList;
@@ -580,16 +580,33 @@ function normalizeContainer(container) {
 	return container;
 }
 //#endregion
+//#region src/constants/index.js
+/**
+* 应用常量配置
+*/
+var API_BASE = window.location.origin;
+var OZ_TO_GRAM = 31.1035;
+var DATA_SOURCE_NAMES = {
+	sina: "新浪财经",
+	eastmoney: "东方财富",
+	gate: "Gate.io",
+	mixed: "混合数据源"
+};
+var REFRESH_INTERVALS = {
+	active: 5e3,
+	normal: 1e4,
+	calm: 2e4,
+	inactive: 3e4
+};
+var TOAST_AUTO_DISMISS = 5e3;
+//#endregion
 //#region src/utils/request.js
 /**
 * 统一请求封装工具
 * 提供重试机制、错误处理、请求拦截等功能
 */
-var getBaseURL = () => {
-	return `${window.location.protocol}//${window.location.host}/api`;
-};
 var CONFIG = {
-	baseURL: getBaseURL(),
+	baseURL: API_BASE + "/api",
 	timeout: 1e4,
 	maxRetries: 3,
 	retryDelay: 1e3,
@@ -817,66 +834,18 @@ async function fetchAllPrices(options = {}) {
 async function setDataSource(source) {
 	return request_default.post(ENDPOINTS.source, { source });
 }
-//#endregion
-//#region \0vite/preload-helper.js
-var scriptRel = "modulepreload";
-var assetsURL = function(dep) {
-	return "/" + dep;
-};
-var seen = {};
-var __vitePreload = function preload(baseModule, deps, importerUrl) {
-	let promise = Promise.resolve();
-	if (deps && deps.length > 0) {
-		const links = document.getElementsByTagName("link");
-		const cspNonceMeta = document.querySelector("meta[property=csp-nonce]");
-		const cspNonce = cspNonceMeta?.nonce || cspNonceMeta?.getAttribute("nonce");
-		function allSettled(promises) {
-			return Promise.all(promises.map((p) => Promise.resolve(p).then((value) => ({
-				status: "fulfilled",
-				value
-			}), (reason) => ({
-				status: "rejected",
-				reason
-			}))));
-		}
-		promise = allSettled(deps.map((dep) => {
-			dep = assetsURL(dep, importerUrl);
-			if (dep in seen) return;
-			seen[dep] = true;
-			const isCss = dep.endsWith(".css");
-			const cssSelector = isCss ? "[rel=\"stylesheet\"]" : "";
-			if (!!importerUrl) for (let i = links.length - 1; i >= 0; i--) {
-				const link = links[i];
-				if (link.href === dep && (!isCss || link.rel === "stylesheet")) return;
-			}
-			else if (document.querySelector(`link[href="${dep}"]${cssSelector}`)) return;
-			const link = document.createElement("link");
-			link.rel = isCss ? "stylesheet" : scriptRel;
-			if (!isCss) link.as = "script";
-			link.crossOrigin = "";
-			link.href = dep;
-			if (cspNonce) link.setAttribute("nonce", cspNonce);
-			document.head.appendChild(link);
-			if (isCss) return new Promise((res, rej) => {
-				link.addEventListener("load", res);
-				link.addEventListener("error", () => rej(/* @__PURE__ */ new Error(`Unable to preload CSS for ${dep}`)));
-			});
-		}));
-	}
-	function handlePreloadError(err) {
-		const e = new Event("vite:preloadError", { cancelable: true });
-		e.payload = err;
-		window.dispatchEvent(e);
-		if (!e.defaultPrevented) throw err;
-	}
-	return promise.then((res) => {
-		for (const item of res || []) {
-			if (item.status !== "rejected") continue;
-			handlePreloadError(item.reason);
-		}
-		return baseModule().catch(handlePreloadError);
-	});
-};
+/**
+* 获取K线数据
+*/
+async function fetchKlineData(symbol, period = "day") {
+	return request_default.get(`/kline/symbol/${symbol}`, { period });
+}
+/**
+* 获取黄金资讯
+*/
+async function fetchNews() {
+	return request_default.get("/news");
+}
 //#endregion
 //#region src/services/websocket.js
 var WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/api/ws`;
@@ -1087,20 +1056,6 @@ var WebSocketService = class {
 			this.heartbeatTimeout = null;
 		}
 		this.missedHeartbeats = 0;
-	}
-	setupNetworkListener(callback) {
-		__vitePreload(async () => {
-			const { networkService } = await import("./networkService-D2aeE5D0.js");
-			return { networkService };
-		}, []).then(({ networkService }) => {
-			this.networkUnsubscribe = networkService.subscribe((status) => {
-				if (status.isOnline && status.wasOffline) {
-					console.log("[WS] Network is back online, triggering reconnect");
-					this.reconnectNow();
-				} else if (!status.isOnline && this.connectionState === "connected") console.log("[WS] Network went offline");
-				if (callback) callback(status);
-			});
-		});
 	}
 	cleanupNetworkListener() {
 		if (this.networkUnsubscribe) {
@@ -5158,55 +5113,58 @@ var OfflineStorage = class {
 		this.stats.writes++;
 		return new Promise((resolve, reject) => {
 			try {
-				const store = this.db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME);
-				const getAllRequest = store.getAll();
-				getAllRequest.onsuccess = (event) => {
-					let records = event.target.result || [];
-					records = records.filter((r) => r.source !== source);
-					const newRecord = {
-						id: `${source}_${Date.now()}`,
-						source,
-						timestamp: Date.now(),
-						compressed: false
-					};
-					const rawData = {
-						price: data.current,
-						prevClose: data.prevClose,
-						change: data.change,
-						changePercent: data.changePercent,
-						currency: data.currency
-					};
-					const { data: compressedData, compressed } = this.compressData(rawData);
-					newRecord.data = compressedData;
-					newRecord.compressed = compressed;
-					if (!compressed) {
-						newRecord.price = data.current;
-						newRecord.prevClose = data.prevClose;
-						newRecord.change = data.change;
-						newRecord.changePercent = data.changePercent;
-						newRecord.currency = data.currency;
-					}
-					records.push(newRecord);
-					if (records.length > MAX_RECORDS_PER_SOURCE * 6) {
-						records.sort((a, b) => a.timestamp - b.timestamp);
-						records = records.slice(-MAX_RECORDS_PER_SOURCE * 6);
-					}
-					const clearRequest = store.clear();
-					clearRequest.onsuccess = () => {
-						let saved = 0;
-						for (const record of records) {
-							const putRequest = store.put(record);
-							putRequest.onsuccess = () => {
-								saved++;
-								if (saved === records.length) resolve();
-							};
-							putRequest.onerror = () => reject(/* @__PURE__ */ new Error("Failed to save record"));
-						}
-						if (records.length === 0) resolve();
-					};
-					clearRequest.onerror = () => reject(/* @__PURE__ */ new Error("Failed to clear store"));
+				const transaction = this.db.transaction(STORE_NAME, "readwrite");
+				const store = transaction.objectStore(STORE_NAME);
+				const newRecord = {
+					id: `${source}_${Date.now()}`,
+					source,
+					timestamp: Date.now(),
+					compressed: false
 				};
-				getAllRequest.onerror = () => reject(/* @__PURE__ */ new Error("Failed to get records"));
+				const rawData = {
+					price: data.current,
+					prevClose: data.prevClose,
+					change: data.change,
+					changePercent: data.changePercent,
+					currency: data.currency
+				};
+				const { data: compressedData, compressed } = this.compressData(rawData);
+				newRecord.data = compressedData;
+				newRecord.compressed = compressed;
+				if (!compressed) {
+					newRecord.price = data.current;
+					newRecord.prevClose = data.prevClose;
+					newRecord.change = data.change;
+					newRecord.changePercent = data.changePercent;
+					newRecord.currency = data.currency;
+				}
+				store.put(newRecord);
+				const index = store.index("source");
+				const countReq = index.count(IDBKeyRange.only(source));
+				countReq.onsuccess = () => {
+					const total = countReq.result;
+					if (total > MAX_RECORDS_PER_SOURCE) {
+						const toDelete = total - MAX_RECORDS_PER_SOURCE;
+						let deleted = 0;
+						const cursorReq = index.openCursor(IDBKeyRange.only(source));
+						cursorReq.onsuccess = (event) => {
+							const cursor = event.target.result;
+							if (cursor && deleted < toDelete) {
+								cursor.delete();
+								deleted++;
+								cursor.continue();
+							}
+						};
+						cursorReq.onerror = () => {
+							console.warn("[OfflineStorage] Cleanup cursor failed");
+						};
+					}
+				};
+				countReq.onerror = () => {
+					console.warn("[OfflineStorage] Count request failed, skipping cleanup");
+				};
+				transaction.oncomplete = () => resolve();
+				transaction.onerror = () => reject(/* @__PURE__ */ new Error("Transaction failed"));
 			} catch (error) {
 				reject(error);
 			}
@@ -5215,30 +5173,29 @@ var OfflineStorage = class {
 	async getHistoryData(source, limit = 100) {
 		await this.initPromise;
 		return new Promise((resolve, reject) => {
-			const getAllRequest = this.db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).getAll();
-			getAllRequest.onsuccess = (event) => {
-				const allRecords = event.target.result || [];
-				const now = Date.now();
-				const decompressedRecords = allRecords.filter((record) => {
-					return record.source === source && now - record.timestamp < DATA_EXPIRY;
-				}).map((record) => {
-					if (record.compressed && record.data) {
+			const index = this.db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).index("source");
+			const minTimestamp = Date.now() - DATA_EXPIRY;
+			const records = [];
+			const cursorReq = index.openCursor(IDBKeyRange.only(source));
+			cursorReq.onsuccess = (event) => {
+				const cursor = event.target.result;
+				if (cursor) {
+					const record = cursor.value;
+					if (record.timestamp >= minTimestamp) if (record.compressed && record.data) {
 						const data = this.decompressData(record);
-						if (data) {
-							this.stats.hits++;
-							return {
-								...record,
-								...data
-							};
-						}
-					}
+						if (data) records.push({
+							...record,
+							...data
+						});
+					} else records.push(record);
+					cursor.continue();
+				} else {
+					records.sort((a, b) => a.timestamp - b.timestamp);
 					this.stats.hits++;
-					return record;
-				});
-				decompressedRecords.sort((a, b) => a.timestamp - b.timestamp);
-				resolve(decompressedRecords.slice(-limit));
+					resolve(records.slice(-limit));
+				}
 			};
-			getAllRequest.onerror = () => {
+			cursorReq.onerror = () => {
 				this.stats.misses++;
 				reject(/* @__PURE__ */ new Error("Failed to get records"));
 			};
@@ -5247,23 +5204,26 @@ var OfflineStorage = class {
 	async getLatestPrices() {
 		await this.initPromise;
 		return new Promise((resolve, reject) => {
-			const getAllRequest = this.db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).getAll();
-			getAllRequest.onsuccess = (event) => {
-				const records = event.target.result || [];
-				const latestData = {};
-				const sourceTimestamps = {};
-				for (const record of records) {
-					let data = record;
-					if (record.compressed && record.data) {
-						const decompressed = this.decompressData(record);
-						if (decompressed) data = {
-							...record,
-							...decompressed
-						};
-					}
-					if (!sourceTimestamps[record.source] || record.timestamp > sourceTimestamps[record.source]) {
-						sourceTimestamps[record.source] = record.timestamp;
-						latestData[record.source] = {
+			const index = this.db.transaction(STORE_NAME, "readonly").objectStore(STORE_NAME).index("source");
+			const latestData = {};
+			const sourceTimestamps = {};
+			const cursorReq = index.openCursor();
+			cursorReq.onsuccess = (event) => {
+				const cursor = event.target.result;
+				if (cursor) {
+					const record = cursor.value;
+					const source = record.source;
+					if (!sourceTimestamps[source] || record.timestamp > sourceTimestamps[source]) {
+						sourceTimestamps[source] = record.timestamp;
+						let data = record;
+						if (record.compressed && record.data) {
+							const decompressed = this.decompressData(record);
+							if (decompressed) data = {
+								...record,
+								...decompressed
+							};
+						}
+						latestData[source] = {
 							price: data.price,
 							timestamp: data.timestamp,
 							prevClose: data.prevClose,
@@ -5272,11 +5232,13 @@ var OfflineStorage = class {
 							currency: data.currency
 						};
 					}
+					cursor.continue();
+				} else {
+					this.stats.hits++;
+					resolve(latestData);
 				}
-				this.stats.hits++;
-				resolve(latestData);
 			};
-			getAllRequest.onerror = () => {
+			cursorReq.onerror = () => {
 				this.stats.misses++;
 				reject(/* @__PURE__ */ new Error("Failed to get records"));
 			};
@@ -5285,20 +5247,22 @@ var OfflineStorage = class {
 	async cleanExpiredData() {
 		await this.initPromise;
 		return new Promise((resolve, reject) => {
-			const store = this.db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME);
-			const getAllRequest = store.getAll();
-			getAllRequest.onsuccess = (event) => {
-				const records = event.target.result || [];
-				const now = Date.now();
-				let expiredCount = 0;
-				for (const record of records) if (now - record.timestamp > DATA_EXPIRY) {
-					store.delete(record.id);
+			const index = this.db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).index("timestamp");
+			const expiryThreshold = Date.now() - DATA_EXPIRY;
+			let expiredCount = 0;
+			const cursorReq = index.openCursor(IDBKeyRange.upperBound(expiryThreshold));
+			cursorReq.onsuccess = (event) => {
+				const cursor = event.target.result;
+				if (cursor) {
+					cursor.delete();
 					expiredCount++;
+					cursor.continue();
+				} else {
+					if (expiredCount > 0) console.log(`[OfflineStorage] Cleaned ${expiredCount} expired records`);
+					resolve(expiredCount);
 				}
-				console.log(`[OfflineStorage] Cleaned ${expiredCount} expired records`);
-				resolve(expiredCount);
 			};
-			getAllRequest.onerror = () => reject(/* @__PURE__ */ new Error("Failed to get records"));
+			cursorReq.onerror = () => reject(/* @__PURE__ */ new Error("Failed to clean expired data"));
 		});
 	}
 	async getStatus() {
@@ -5352,45 +5316,9 @@ var offlineStorage = new OfflineStorage();
 //#region src/services/dataRecovery.js
 var DataRecovery = class {
 	constructor() {
-		this.pendingUpdates = [];
 		this.lastSyncTime = 0;
-		this.recoveryInterval = 3e4;
 		this.isRecovering = false;
-		this.maxPendingUpdates = 1e3;
-		this.storageKey = "gold_pending_updates";
 		this.syncKey = "gold_last_sync";
-		this.restorePendingUpdates();
-	}
-	savePendingUpdate(type, data) {
-		const update = {
-			type,
-			data,
-			timestamp: Date.now(),
-			id: `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-		};
-		this.pendingUpdates.push(update);
-		if (this.pendingUpdates.length > this.maxPendingUpdates) this.pendingUpdates = this.pendingUpdates.slice(-this.maxPendingUpdates);
-		this.persistPendingUpdates();
-		return update.id;
-	}
-	persistPendingUpdates() {
-		try {
-			localStorage.setItem(this.storageKey, JSON.stringify(this.pendingUpdates));
-		} catch (e) {
-			console.warn("[DataRecovery] Failed to persist updates:", e);
-		}
-	}
-	restorePendingUpdates() {
-		try {
-			const stored = localStorage.getItem(this.storageKey);
-			if (stored) {
-				this.pendingUpdates = JSON.parse(stored);
-				console.log(`[DataRecovery] Restored ${this.pendingUpdates.length} pending updates`);
-			}
-		} catch (e) {
-			console.warn("[DataRecovery] Failed to restore updates:", e);
-			this.pendingUpdates = [];
-		}
 		try {
 			const lastSync = localStorage.getItem(this.syncKey);
 			if (lastSync) this.lastSyncTime = parseInt(lastSync);
@@ -5414,11 +5342,6 @@ var DataRecovery = class {
 			console.log("[DataRecovery] Found offline data:", Object.keys(offlineData).length, "sources");
 			const networkData = await fetchFunction();
 			const mergedData = this.mergeData(offlineData, networkData);
-			if (this.pendingUpdates.length > 0) {
-				console.log(`[DataRecovery] Processing ${this.pendingUpdates.length} pending updates`);
-				this.pendingUpdates = [];
-				this.persistPendingUpdates();
-			}
 			await offlineStorage.cleanExpiredData();
 			this.recordSync();
 			console.log("[DataRecovery] Recovery completed successfully");
@@ -5449,20 +5372,8 @@ var DataRecovery = class {
 	getRecoveryStatus() {
 		return {
 			isRecovering: this.isRecovering,
-			pendingCount: this.pendingUpdates.length,
 			lastSync: this.lastSyncTime,
 			offlineSince: this.lastSyncTime > 0 ? Date.now() - this.lastSyncTime : 0
-		};
-	}
-	clearPendingUpdates() {
-		this.pendingUpdates = [];
-		localStorage.removeItem(this.storageKey);
-		console.log("[DataRecovery] Cleared all pending updates");
-	}
-	async getRecoveryData(source) {
-		return {
-			history: await offlineStorage.getHistoryData(source, 50),
-			pendingUpdates: this.pendingUpdates.filter((u) => u.source === source)
 		};
 	}
 };
@@ -5545,15 +5456,8 @@ var NetworkService = class {
 var networkService = new NetworkService();
 //#endregion
 //#region src/stores/goldStore.js
-var MAX_HISTORY_LENGTH = 360;
-var HISTORY_MAX_AGE$1 = 1800 * 1e3;
 var SMART_POLLING = {
-	intervals: {
-		active: 5e3,
-		normal: 1e4,
-		calm: 2e4,
-		inactive: 3e4
-	},
+	intervals: REFRESH_INTERVALS,
 	thresholds: {
 		activeToNormal: 6e4,
 		normalToCalm: 12e4,
@@ -5572,12 +5476,12 @@ var loadHistoryFromStorage = () => {
 		const stored = localStorage.getItem("gold-history-data");
 		if (stored) {
 			const data = JSON.parse(stored);
-			if (data.timestamp && Date.now() - data.timestamp < HISTORY_MAX_AGE$1) {
+			if (data.timestamp && Date.now() - data.timestamp < 18e5) {
 				const history = data.history || {};
 				const now = Date.now();
 				let hasValidData = false;
 				for (const key in history) if (Array.isArray(history[key])) {
-					history[key] = history[key].filter((item) => item.price > 0 && now - item.timestamp < HISTORY_MAX_AGE$1);
+					history[key] = history[key].filter((item) => item.price > 0 && now - item.timestamp < 18e5);
 					const prices = history[key].map((h) => h.price);
 					const uniquePrices = [...new Set(prices)];
 					if (uniquePrices.length >= 2) hasValidData = true;
@@ -5856,7 +5760,6 @@ var useGoldStore = defineStore("gold", {
 				this.priceFlash[key] = false;
 			}, 300);
 		},
-		debouncedSave() {},
 		setupSubscribe() {
 			if (subscribeSetup) return;
 			subscribeSetup = true;
@@ -5882,8 +5785,8 @@ var useGoldStore = defineStore("gold", {
 				price: data.current,
 				timestamp: data.timestamp || now
 			};
-			const newHistory = [...history.filter((item) => now - item.timestamp < HISTORY_MAX_AGE$1 && item.price > 0), newEntry];
-			return newHistory.length > MAX_HISTORY_LENGTH ? newHistory.slice(-MAX_HISTORY_LENGTH) : newHistory;
+			const newHistory = [...history.filter((item) => now - item.timestamp < 18e5 && item.price > 0), newEntry];
+			return newHistory.length > 360 ? newHistory.slice(-360) : newHistory;
 		},
 		saveHistoryData() {
 			saveHistoryToStorage({
@@ -5929,11 +5832,9 @@ var useGoldStore = defineStore("gold", {
 				this.wsReconnecting = status.reconnecting;
 				if (status.connected) {
 					this.updateSyncStatus("connected");
-					if (dataRecovery.getRecoveryStatus().pendingCount === 0) dataRecovery.recordSync();
-				} else if (status.reconnecting) {
-					this.updateSyncStatus("connecting");
-					dataRecovery.savePendingUpdate("connection_lost", { timestamp: Date.now() });
-				} else {
+					dataRecovery.recordSync();
+				} else if (status.reconnecting) this.updateSyncStatus("connecting");
+				else {
 					this.updateSyncStatus("error");
 					this.startHttpPolling();
 				}
@@ -5962,7 +5863,6 @@ var useGoldStore = defineStore("gold", {
 				} else if (!status.isOnline) {
 					console.log("[Store] Network disconnected");
 					this.updateSyncStatus("offline");
-					dataRecovery.savePendingUpdate("network_offline", { timestamp: Date.now() });
 				}
 			});
 		},
@@ -6053,20 +5953,6 @@ var useGoldStore = defineStore("gold", {
 		}
 	}
 });
-//#endregion
-//#region src/constants/index.js
-/**
-* 应用常量配置
-*/
-var OZ_TO_GRAM = 31.1035;
-var DATA_SOURCE_NAMES = {
-	sina: "新浪财经",
-	eastmoney: "东方财富",
-	gate: "Gate.io",
-	mixed: "混合数据源"
-};
-var NO_CHANGE_DISPLAY_KEYS = ["paxg", "dxy"];
-var TOAST_AUTO_DISMISS = 5e3;
 //#endregion
 //#region src/components/HeaderBar.vue
 var _hoisted_1$12 = { class: "app-header" };
@@ -6280,13 +6166,13 @@ var _sfc_main$11 = {
 				},
 				{
 					key: "paxg",
-					label: "国际暗金",
+					label: "数字黄金",
 					symbol: "PAXG",
 					cnyPrice: (paxg.current * rate).toFixed(2),
 					usdPrice: paxg.current,
-					change: 0,
-					percent: 0,
-					trend: "flat",
+					change: paxg.change || 0,
+					percent: paxg.changePercent || 0,
+					trend: getTrend(paxg.change),
 					isRate: false,
 					flash: priceFlash.paxg
 				},
@@ -6308,15 +6194,15 @@ var _sfc_main$11 = {
 					symbol: "DXY",
 					cnyPrice: dxy.current,
 					usdPrice: null,
-					change: 0,
-					percent: 0,
-					trend: "flat",
+					change: dxy.change || 0,
+					percent: dxy.changePercent || 0,
+					trend: getTrend(dxy.change),
 					isRate: true,
 					flash: priceFlash.dxy
 				}
 			].map((item) => ({
 				...item,
-				showChange: !NO_CHANGE_DISPLAY_KEYS.includes(item.key)
+				showChange: true
 			}));
 		});
 		return (_ctx, _cache) => {
@@ -6417,10 +6303,7 @@ var KlineChart_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 	},
 	setup(__props) {
 		const props = __props;
-		const getApiBase = () => {
-			return `${window.location.origin}/api`;
-		};
-		const API_BASE = getApiBase();
+		const API_BASE_URL = API_BASE + "/api";
 		const chartRef = ref(null);
 		let chart = null;
 		const loading = ref(true);
@@ -6500,7 +6383,7 @@ var KlineChart_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 			if (vol >= 1e4) return (vol / 1e4).toFixed(2) + "万";
 			return vol.toFixed(0);
 		};
-		const fetchKlineData = async (forceRefresh = false) => {
+		const fetchKlineData$1 = async (forceRefresh = false) => {
 			const cacheKey = getCacheKey(props.symbol || props.apiEndpoint, currentPeriod.value);
 			if (!forceRefresh) {
 				const cachedData = getFromCache(cacheKey);
@@ -6513,12 +6396,13 @@ var KlineChart_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 			}
 			loading.value = true;
 			try {
-				let url;
-				if (props.apiEndpoint) url = `${API_BASE}${props.apiEndpoint}?period=${currentPeriod.value}`;
-				else url = `${API_BASE}/kline/symbol/${props.symbol}?period=${currentPeriod.value}`;
-				const response = await axios.get(url, { timeout: 15e3 });
-				if (response.data.success && response.data.data) {
-					const data = response.data.data;
+				let data;
+				if (props.apiEndpoint) {
+					const url = `${API_BASE_URL}${props.apiEndpoint}?period=${currentPeriod.value}`;
+					const response = await axios.get(url, { timeout: 15e3 });
+					if (response.data?.success && response.data?.data) data = response.data.data;
+				} else data = await fetchKlineData(props.symbol, currentPeriod.value);
+				if (data) {
 					klineData.value = data;
 					saveToCache(cacheKey, data);
 					updateChart();
@@ -6682,17 +6566,17 @@ var KlineChart_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 		};
 		const changePeriod = (period) => {
 			currentPeriod.value = period;
-			fetchKlineData();
+			fetchKlineData$1();
 		};
 		const handleResize = () => {
 			chart && chart.resize();
 		};
 		watch(() => props.symbol, () => {
-			fetchKlineData();
+			fetchKlineData$1();
 		});
 		onMounted(() => {
 			initChart();
-			fetchKlineData();
+			fetchKlineData$1();
 			window.addEventListener("resize", handleResize);
 		});
 		onUnmounted(() => {
@@ -6739,7 +6623,7 @@ var KlineChart_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 			]);
 		};
 	}
-}, [["__scopeId", "data-v-360ca9b3"]]);
+}, [["__scopeId", "data-v-437e2994"]]);
 //#endregion
 //#region src/components/ChartsSection.vue
 var _hoisted_1$8 = { class: "charts-section" };
@@ -6928,17 +6812,13 @@ var NewsPanel_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 		const newsList = ref([]);
 		const loading = ref(false);
 		const error = ref(null);
-		const getApiBase = () => {
-			return window.location.origin;
-		};
-		const API_BASE = getApiBase();
 		const loadNews = async () => {
 			loading.value = true;
 			error.value = null;
 			try {
-				const result = await (await fetch(`${API_BASE}/api/news`)).json();
-				if (result.success && result.data) newsList.value = result.data;
-				else error.value = result.error || "获取资讯失败";
+				const data = await fetchNews();
+				if (Array.isArray(data)) newsList.value = data;
+				else error.value = "获取资讯失败";
 			} catch (err) {
 				console.error("Failed to load news:", err);
 				error.value = "网络请求失败";
@@ -7041,7 +6921,7 @@ var NewsPanel_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 			]))]);
 		};
 	}
-}, [["__scopeId", "data-v-0659a845"]]);
+}, [["__scopeId", "data-v-c2094599"]]);
 //#endregion
 //#region src/utils/technicalIndicators.js
 /**
@@ -7483,27 +7363,12 @@ var AnalysisPanel_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 		const midAnalysis = ref([]);
 		const longAnalysis = ref([]);
 		const technicalIndicators = ref(null);
-		const calculateMA = (prices, period) => {
-			if (prices.length < period) return null;
-			return prices.slice(-period).reduce((a, b) => a + b, 0) / period;
-		};
 		const calculateStdDev = (prices, period) => {
 			if (prices.length < period) return 0;
 			const slice = prices.slice(-period);
 			const avg = slice.reduce((a, b) => a + b, 0) / period;
 			const squaredDiffs = slice.map((p) => Math.pow(p - avg, 2));
 			return Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / period);
-		};
-		const calculateRSI = (prices, period = 14) => {
-			if (prices.length < period + 1) return 50;
-			let gains = 0, losses = 0;
-			for (let i = prices.length - period; i < prices.length; i++) {
-				const change = prices[i] - prices[i - 1];
-				if (change > 0) gains += change;
-				else losses -= change;
-			}
-			if (losses === 0) return 100;
-			return 100 - 100 / (1 + gains / losses);
 		};
 		const calculateMomentum = (prices, period = 5) => {
 			if (prices.length < period + 1) return 0;
@@ -7513,7 +7378,7 @@ var AnalysisPanel_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 		};
 		const calculateBollingerPosition = (currentPrice, prices, period = 20) => {
 			if (prices.length < period) return .5;
-			const ma = calculateMA(prices, period);
+			const ma = calculateSMA(prices, period);
 			const stdDev = calculateStdDev(prices, period);
 			if (stdDev === 0) return .5;
 			const upperBand = ma + 2 * stdDev;
@@ -7565,7 +7430,7 @@ var AnalysisPanel_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 			let score = 50;
 			const items = [];
 			const priceArray = prices || (au.history || []).map((h) => h.price);
-			const rsi = calculateRSI(priceArray, 14);
+			const rsi = calculateRSI(priceArray, 14).value;
 			if (rsi !== null) if (rsi > 70) {
 				score -= 10;
 				items.push({
@@ -7595,8 +7460,8 @@ var AnalysisPanel_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 				text: `RSI中性区域(${rsi.toFixed(1)})`
 			});
 			if (priceArray.length >= 10) {
-				const ma5 = calculateMA(priceArray, 5);
-				const ma10 = calculateMA(priceArray, 10);
+				const ma5 = calculateSMA(priceArray, 5);
+				const ma10 = calculateSMA(priceArray, 10);
 				const currentPrice = au.current;
 				if (ma5 && ma10) {
 					const ma5AboveMa10 = ma5 > ma10;
@@ -7910,8 +7775,8 @@ var AnalysisPanel_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 				text: `汇率稳定区间(${rate.current.toFixed(2)})`
 			});
 			if (prices.length >= 15) {
-				const ma5 = calculateMA(prices, 5);
-				const ma15 = calculateMA(prices, 15);
+				const ma5 = calculateSMA(prices, 5);
+				const ma15 = calculateSMA(prices, 15);
 				if (ma5 && ma15) {
 					if (ma5 > ma15 * 1.005) {
 						score += 8;
@@ -7963,17 +7828,18 @@ var AnalysisPanel_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 			lastDataHash.value = currentHash;
 			const prices = (store.au9999.history || []).map((h) => h.price);
 			const currentPrice = store.au9999.current;
+			analyzeShortTerm(prices);
+			analyzeMidTerm(prices);
+			analyzeLongTerm();
 			if (prices.length >= 10) {
 				const analysis = analyzeTechnicalIndicators(prices, currentPrice);
 				technicalIndicators.value = analysis.indicators;
-				if (analysis.signals.length > 0) {
-					const existingSignals = shortAnalysis.value || [];
-					shortAnalysis.value = [...analysis.signals.slice(0, 3), ...existingSignals.slice(0, 5)];
+				if (analysis.signals.length > 0 && shortAnalysis.value.length > 0) {
+					const existingTexts = shortAnalysis.value.map((i) => i.text);
+					const newSignals = analysis.signals.filter((s) => !existingTexts.includes(s.text)).slice(0, 3);
+					shortAnalysis.value = [...shortAnalysis.value, ...newSignals];
 				}
 			}
-			analyzeShortTerm();
-			analyzeMidTerm();
-			analyzeLongTerm();
 		};
 		watch(() => store.lastUpdate, () => {
 			if (store.lastUpdate) performAnalysis();
@@ -7982,7 +7848,7 @@ var AnalysisPanel_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 			performAnalysis();
 		});
 		return (_ctx, _cache) => {
-			return openBlock(), createElementBlock("div", _hoisted_1$5, [_cache[6] || (_cache[6] = createStaticVNode("<div class=\"panel-header\" data-v-c9c8182d><div class=\"header-left\" data-v-c9c8182d><h3 class=\"panel-title\" data-v-c9c8182d><span class=\"title-icon\" data-v-c9c8182d>🤖</span> 数据分析 </h3><span class=\"panel-subtitle\" data-v-c9c8182d>DATA ANALYSIS</span></div></div>", 1)), createBaseVNode("div", _hoisted_2$5, [createBaseVNode("div", _hoisted_3$5, [
+			return openBlock(), createElementBlock("div", _hoisted_1$5, [_cache[6] || (_cache[6] = createStaticVNode("<div class=\"panel-header\" data-v-77101ed0><div class=\"header-left\" data-v-77101ed0><h3 class=\"panel-title\" data-v-77101ed0><span class=\"title-icon\" data-v-77101ed0>🤖</span> 数据分析 </h3><span class=\"panel-subtitle\" data-v-77101ed0>DATA ANALYSIS</span></div></div>", 1)), createBaseVNode("div", _hoisted_2$5, [createBaseVNode("div", _hoisted_3$5, [
 				createBaseVNode("div", { class: normalizeClass(["analysis-section short", shortTerm.value.class]) }, [
 					createBaseVNode("div", _hoisted_4$4, [_cache[0] || (_cache[0] = createBaseVNode("div", { class: "term-info" }, [
 						createBaseVNode("span", { class: "term-icon" }, "⚡"),
@@ -8028,7 +7894,7 @@ var AnalysisPanel_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 			])])]);
 		};
 	}
-}, [["__scopeId", "data-v-c9c8182d"]]);
+}, [["__scopeId", "data-v-77101ed0"]]);
 //#endregion
 //#region src/components/SyncIndicator.vue
 var _hoisted_1$4 = { class: "sync-icon" };
@@ -8069,21 +7935,51 @@ var SyncIndicator_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 		showStats: {
 			type: Boolean,
 			default: false
+		},
+		connected: {
+			type: Boolean,
+			default: false
+		},
+		reconnecting: {
+			type: Boolean,
+			default: false
+		},
+		latency: {
+			type: Number,
+			default: 0
+		},
+		recordCount: {
+			type: Number,
+			default: 0
+		},
+		lastUpdate: {
+			type: Number,
+			default: 0
+		},
+		sourceStatus: {
+			type: Object,
+			default: () => ({})
 		}
 	},
-	setup(__props, { expose: __expose }) {
-		const syncStatus = ref("offline");
-		const isSyncing = ref(false);
-		const latency = ref("--");
-		const cacheStats = ref({
-			recordCount: 0,
-			lastUpdate: null
+	setup(__props) {
+		const props = __props;
+		const syncStatus = computed(() => {
+			if (props.reconnecting) return "connecting";
+			if (props.connected) return "connected";
+			return "offline";
 		});
-		const lastUpdateTime = ref("");
-		const sourceStatus = ref({
-			sina: "ok",
-			eastmoney: "ok",
-			gate: "ok"
+		const isSyncing = computed(() => props.reconnecting);
+		const lastUpdateTime = computed(() => {
+			if (!props.lastUpdate) return "";
+			return new Date(props.lastUpdate).toLocaleTimeString("zh-CN", {
+				hour: "2-digit",
+				minute: "2-digit",
+				second: "2-digit"
+			});
+		});
+		const latencyDisplay = computed(() => {
+			if (props.latency === 0 || props.latency === null || props.latency === void 0) return "--";
+			return props.latency;
 		});
 		const statusLabel = computed(() => {
 			switch (syncStatus.value) {
@@ -8095,48 +7991,19 @@ var SyncIndicator_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 			}
 		});
 		const syncDetails = computed(() => {
-			if (syncStatus.value === "connected") return `${Object.values(sourceStatus.value).filter((s) => s === "ok").length}/3 数据源正常`;
+			if (syncStatus.value === "connected") return `${Object.values(props.sourceStatus || {}).filter((s) => s === "ok").length}/3 数据源正常`;
 			else if (syncStatus.value === "error") return "正在尝试重新连接";
 			else if (syncStatus.value === "offline") return "正在使用离线数据";
 			return "";
 		});
 		const getSourceStatus = (source) => {
-			return sourceStatus.value[source] || "ok";
+			return props.sourceStatus?.[source] || "ok";
 		};
-		const updateStatus = (status, syncing = false, delay = null) => {
-			syncStatus.value = status;
-			isSyncing.value = syncing;
-			if (delay !== null && delay !== void 0 && typeof delay === "number") latency.value = delay;
-		};
-		const updateCacheStats = (stats) => {
-			if (stats && typeof stats.recordCount === "number") {
-				cacheStats.value = {
-					recordCount: stats.recordCount,
-					lastUpdate: stats.lastUpdate || null
-				};
-				if (stats.lastUpdate) lastUpdateTime.value = new Date(stats.lastUpdate).toLocaleTimeString("zh-CN", {
-					hour: "2-digit",
-					minute: "2-digit",
-					second: "2-digit"
-				});
-			}
-		};
-		const updateSourceStatus = (sources) => {
-			if (sources) sourceStatus.value = {
-				...sourceStatus.value,
-				...sources
-			};
-		};
-		__expose({
-			updateStatus,
-			updateCacheStats,
-			updateSourceStatus
-		});
 		return (_ctx, _cache) => {
 			return openBlock(), createElementBlock("div", { class: normalizeClass(["sync-indicator", syncStatus.value]) }, [
 				createBaseVNode("div", _hoisted_1$4, [createBaseVNode("div", { class: normalizeClass(["sync-dot", { active: isSyncing.value }]) }, null, 2), isSyncing.value ? (openBlock(), createElementBlock("div", _hoisted_2$4)) : createCommentVNode("", true)]),
 				createBaseVNode("div", _hoisted_3$4, [createBaseVNode("span", _hoisted_4$3, toDisplayString(statusLabel.value), 1), __props.showDetails ? (openBlock(), createElementBlock("span", _hoisted_5$2, toDisplayString(syncDetails.value), 1)) : createCommentVNode("", true)]),
-				__props.showStats ? (openBlock(), createElementBlock("div", _hoisted_6$2, [createBaseVNode("div", _hoisted_7, [_cache[0] || (_cache[0] = createBaseVNode("span", { class: "stat-label" }, "延迟", -1)), createBaseVNode("span", _hoisted_8, toDisplayString(latency.value) + "ms", 1)]), createBaseVNode("div", _hoisted_9, [_cache[1] || (_cache[1] = createBaseVNode("span", { class: "stat-label" }, "缓存", -1)), createBaseVNode("span", _hoisted_10, toDisplayString(cacheStats.value.recordCount), 1)])])) : createCommentVNode("", true),
+				__props.showStats ? (openBlock(), createElementBlock("div", _hoisted_6$2, [createBaseVNode("div", _hoisted_7, [_cache[0] || (_cache[0] = createBaseVNode("span", { class: "stat-label" }, "延迟", -1)), createBaseVNode("span", _hoisted_8, toDisplayString(latencyDisplay.value) + "ms", 1)]), createBaseVNode("div", _hoisted_9, [_cache[1] || (_cache[1] = createBaseVNode("span", { class: "stat-label" }, "缓存", -1)), createBaseVNode("span", _hoisted_10, toDisplayString(__props.recordCount), 1)])])) : createCommentVNode("", true),
 				__props.showStats ? (openBlock(), createElementBlock("div", _hoisted_11, [
 					createBaseVNode("div", { class: normalizeClass(["source-item", getSourceStatus("sina")]) }, [..._cache[2] || (_cache[2] = [createBaseVNode("span", { class: "source-dot" }, null, -1), createBaseVNode("span", { class: "source-name" }, "新浪", -1)])], 2),
 					createBaseVNode("div", { class: normalizeClass(["source-item", getSourceStatus("eastmoney")]) }, [..._cache[3] || (_cache[3] = [createBaseVNode("span", { class: "source-dot" }, null, -1), createBaseVNode("span", { class: "source-name" }, "东财", -1)])], 2),
@@ -8146,7 +8013,7 @@ var SyncIndicator_default = /* @__PURE__ */ _plugin_vue_export_helper_default({
 			], 2);
 		};
 	}
-}, [["__scopeId", "data-v-eba8822e"]]);
+}, [["__scopeId", "data-v-5c2897ba"]]);
 //#endregion
 //#region src/components/StatsSkeleton.vue
 var _hoisted_1$3 = { class: "stats-skeleton" };
@@ -8368,23 +8235,6 @@ var _sfc_main = {
 	setup(__props) {
 		const store = useGoldStore();
 		const isDataLoaded = ref(false);
-		const syncIndicatorRef = ref(null);
-		watch(() => ({
-			status: store.syncStatus,
-			latency: store.syncStats.latency,
-			recordCount: store.syncStats.recordCount,
-			lastUpdate: store.syncStats.lastUpdate,
-			sourceStatus: store.sourceStatus
-		}), (stats) => {
-			if (syncIndicatorRef.value) {
-				syncIndicatorRef.value.updateStatus(stats.status, stats.status === "connecting", stats.latency);
-				syncIndicatorRef.value.updateCacheStats({
-					recordCount: stats.recordCount,
-					lastUpdate: stats.lastUpdate
-				});
-				syncIndicatorRef.value.updateSourceStatus(stats.sourceStatus);
-			}
-		}, { deep: true });
 		watch(() => store.lastUpdate, (val) => {
 			if (val && !isDataLoaded.value) isDataLoaded.value = true;
 		});
@@ -8399,14 +8249,6 @@ var _sfc_main = {
 			await store.fetchAllData();
 			isDataLoaded.value = true;
 			await store.updateCacheStats();
-			if (syncIndicatorRef.value) {
-				syncIndicatorRef.value.updateStatus(store.syncStatus, false, store.syncStats.latency);
-				syncIndicatorRef.value.updateCacheStats({
-					recordCount: store.syncStats.recordCount,
-					lastUpdate: store.syncStats.lastUpdate
-				});
-				syncIndicatorRef.value.updateSourceStatus(store.sourceStatus);
-			}
 		});
 		onUnmounted(() => {
 			store.disconnectWebSocket();
@@ -8415,11 +8257,22 @@ var _sfc_main = {
 			return openBlock(), createElementBlock("div", { class: normalizeClass(["app", { "data-loaded": isDataLoaded.value }]) }, [
 				createVNode(_sfc_main$13, { "data-source": unref(store).dataSource }, {
 					actions: withCtx(() => [createVNode(SyncIndicator_default, {
-						ref_key: "syncIndicatorRef",
-						ref: syncIndicatorRef,
 						"show-details": true,
-						"show-stats": true
-					}, null, 512), createVNode(SettingsPanel_default, { "polling-mode": unref(store).pollingMode }, null, 8, ["polling-mode"])]),
+						"show-stats": true,
+						connected: unref(store).wsConnected,
+						reconnecting: unref(store).wsReconnecting,
+						latency: unref(store).syncStats.latency,
+						"record-count": unref(store).syncStats.recordCount,
+						"last-update": unref(store).syncStats.lastUpdate,
+						"source-status": unref(store).sourceStatus
+					}, null, 8, [
+						"connected",
+						"reconnecting",
+						"latency",
+						"record-count",
+						"last-update",
+						"source-status"
+					]), createVNode(SettingsPanel_default, { "polling-mode": unref(store).pollingMode }, null, 8, ["polling-mode"])]),
 					_: 1
 				}, 8, ["data-source"]),
 				createBaseVNode("main", _hoisted_1, [!isDataLoaded.value ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [createVNode(StatsSkeleton_default, { count: 6 }), createVNode(ChartsSkeleton_default, { count: 2 })], 64)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createVNode(_sfc_main$11, {
@@ -8610,4 +8463,3 @@ app.directive("loading", {
 app.use(pinia);
 app.mount("#app");
 //#endregion
-export { networkService as t };
