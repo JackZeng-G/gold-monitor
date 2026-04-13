@@ -86,6 +86,53 @@
 - Go 1.21+
 - Node.js 18+
 
+### Docker 部署（推荐）
+
+项目已配置好 Docker，可以一键部署：
+
+#### 1. 先构建二进制文件
+
+```bash
+# 构建前端
+npm run build
+
+# 构建后端（Linux 可执行文件，用于 Docker）
+cd backend
+go build -ldflags "-X main.Version=1.0.0 -X 'main.BuildTime=$(date -Iseconds)'" -o gold-monitor-linux
+```
+
+#### 2. 使用 Docker Compose 启动
+
+```bash
+docker-compose up -d
+```
+
+应用将在 <http://localhost:20031> 运行
+
+#### 3. 使用 Docker 命令直接运行
+
+```bash
+# 构建镜像
+docker build -t gold-monitor:latest .
+
+# 运行容器
+docker run -d \
+  --name gold-monitor \
+  --restart unless-stopped \
+  -p 20031:8081 \
+  -e TZ=Asia/Shanghai \
+  -e GIN_MODE=release \
+  gold-monitor:latest
+```
+
+#### 停止服务
+
+```bash
+docker-compose down
+```
+
+---
+
 ### 开发模式
 
 1. 安装前端依赖
