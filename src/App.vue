@@ -281,9 +281,14 @@ body {
 // 响应式布局
 // ========================================
 
-@media (max-width: 1400px) {
+@media (min-width: 1201px) and (max-width: 1400px) {
+  .main-column,
+  .side-column {
+    height: 700px;
+    min-height: 700px;
+  }
   .content-grid {
-    grid-template-columns: 1fr 380px;
+    grid-template-columns: 1fr 1fr;
   }
 }
 
