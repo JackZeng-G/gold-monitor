@@ -16,7 +16,7 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositorie
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
 # 复制已编译好的二进制文件（前端已内嵌）
-COPY backend/gold-monitor-linux /app/gold-monitor
+COPY build/gold-monitor-linux-amd64 /app/gold-monitor
 
 # 创建非 root 用户
 RUN addgroup -g 1000 appgroup \

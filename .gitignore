@@ -29,10 +29,8 @@ dist-ssr
 # Claude Code superpowers (plans/specs contain internal thoughts)
 docs/superpowers/
 
-# Backend build artifacts
-backend/*.exe
-backend/gold-monitor*
-!backend/gold-monitor-backend/
+# Build output
+build/
 
 # Embedded static assets (rebuilt from dist)
 backend/static/assets/

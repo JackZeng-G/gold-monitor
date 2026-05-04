@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -47,8 +48,9 @@ func main() {
 	// 设置 Gin 模式
 	gin.SetMode(gin.ReleaseMode)
 
-	// 创建 Gin 实例
-	r := gin.Default()
+	// 创建 Gin 实例（健康检查智能日志：正常静默，异常最多3次，恢复1次）
+	r := gin.New()
+	r.Use(gin.Recovery(), healthAwareLogger())
 
 	// 配置 CORS - 允许所有本地开发端口
 	config := cors.Config{
@@ -192,5 +194,46 @@ func main() {
 
 	if err := r.Run(addr); err != nil {
 		log.Fatal("Failed to start server:", err)
+	}
+}
+
+// healthAwareLogger 健康检查智能日志中间件
+// 正常请求正常记录；/api/health 正常时静默，异常最多记3次，恢复记1次
+func healthAwareLogger() gin.HandlerFunc {
+	stdLogger := gin.Logger()
+	var (
+		mu           sync.Mutex
+		failureCount int
+		wasUnhealthy bool
+	)
+
+	return func(c *gin.Context) {
+		path := c.Request.URL.Path
+
+		// 非健康检查请求，走标准 gin logger
+		if path != "/api/health" {
+			stdLogger(c)
+			return
+		}
+
+		// 健康检查请求，先执行handler拿到status
+		c.Next()
+		status := c.Writer.Status()
+
+		mu.Lock()
+		defer mu.Unlock()
+
+		if status >= 400 {
+			if failureCount < 3 {
+				log.Printf("[HEALTH] ❌ 异常 status=%d (第%d次)", status, failureCount+1)
+			}
+			failureCount++
+			wasUnhealthy = true
+		} else if wasUnhealthy {
+			log.Printf("[HEALTH] ✅ 恢复正常 (之前连续异常%d次)", failureCount)
+			failureCount = 0
+			wasUnhealthy = false
+		}
+		// 正常时不打日志
 	}
 }
