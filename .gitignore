@@ -7,10 +7,17 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build output
 dist
 dist-ssr
-*.local
+build/
+
+# Backend embedded assets (rebuilt from dist)
+backend/static/assets/
+backend/static/index.html
 
 # Editor directories and files
 .vscode/*
@@ -25,12 +32,3 @@ dist-ssr
 
 # Claude local settings
 .claude/
-
-# Claude Code superpowers (plans/specs contain internal thoughts)
-docs/superpowers/
-
-# Build output
-build/
-
-# Embedded static assets (rebuilt from dist)
-backend/static/assets/

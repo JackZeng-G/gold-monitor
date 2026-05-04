@@ -23,14 +23,14 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # 构建
 build() {
     log_info "Building Docker image..."
-    docker-compose build --no-cache
+    docker compose build --no-cache
     log_info "Build completed!"
 }
 
 # 启动
 start() {
     log_info "Starting ${APP_NAME}..."
-    docker-compose up -d
+    docker compose up -d
     sleep 2
     log_info "Service started at http://localhost:8081"
 }
@@ -38,7 +38,7 @@ start() {
 # 停止
 stop() {
     log_info "Stopping ${APP_NAME}..."
-    docker-compose down
+    docker compose down
     log_info "Service stopped."
 }
 
@@ -51,12 +51,12 @@ restart() {
 
 # 日志
 logs() {
-    docker-compose logs -f --tail=100
+    docker compose logs -f --tail=100
 }
 
 # 状态
 status() {
-    docker-compose ps
+    docker compose ps
     echo ""
     log_info "Health check:"
     curl -s http://localhost:8081/api/health 2>/dev/null || echo "Service not responding"
@@ -65,7 +65,7 @@ status() {
 # 清理
 clean() {
     log_warn "Cleaning up..."
-    docker-compose down -v --rmi local
+    docker compose down -v --rmi local
     docker image prune -f
     log_info "Cleanup completed!"
 }

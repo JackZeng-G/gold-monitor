@@ -29,7 +29,7 @@ export default defineConfig({
             return 'vue-vendor'
           }
           // 图表库
-          if (id.includes('node_modules/echarts') || id.includes('node_modules/lightweight-charts')) {
+          if (id.includes('node_modules/echarts') ) {
             return 'charts'
           }
           // 工具库
