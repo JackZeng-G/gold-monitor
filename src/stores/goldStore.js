@@ -56,14 +56,12 @@ const loadHistoryFromStorage = () => {
               hasValidData = true;
             } else if (prices.length > 0) {
               // 如果所有价格都一样，清空该历史
-              console.log(`Clearing ${key} history: all prices are the same (${uniquePrices[0]})`);
               history[key] = [];
             }
           }
         }
         // 如果没有任何有效数据，返回空对象
         if (!hasValidData) {
-          console.log('No valid history data found, starting fresh');
           return {};
         }
         return history;
@@ -262,7 +260,6 @@ export const useGoldStore = defineStore('gold', {
      */
     async recoverFromOffline() {
       try {
-        console.log('[Store] Starting offline recovery...');
         const offlineData = await offlineStorage.getLatestPrices();
 
         // 更新各个数据源
@@ -290,7 +287,6 @@ export const useGoldStore = defineStore('gold', {
         }
 
         this.lastUpdate = Date.now();
-        console.log('[Store] Offline recovery completed');
       } catch (error) {
         console.error('[Store] Offline recovery failed:', error);
       }
@@ -362,7 +358,6 @@ export const useGoldStore = defineStore('gold', {
       // 请求去重： 如果已有待处理请求，直接返回
       const now = Date.now();
       if (pendingRequest && (now - lastRequestTime < REQUEST_DEDUP_INTERVAL)) {
-        console.log('[Store] Request deduplicated, Time since last:', now - lastRequestTime, 'ms');
         return pendingRequest;
       }
 
@@ -582,7 +577,6 @@ export const useGoldStore = defineStore('gold', {
       this.dxy.history = [];
       this.paxg.history = [];
       localStorage.removeItem('gold-history-data');
-      console.log('History cleared');
     },
 
     /**
@@ -631,7 +625,6 @@ export const useGoldStore = defineStore('gold', {
       // 尝试连接 WebSocket
       wsService.connect().then((connected) => {
         if (!connected) {
-          console.log('WebSocket connection failed, falling back to HTTP polling');
           this.updateSyncStatus('offline');
           this.startHttpPolling();
           // 尝试从离线存储恢复
@@ -653,11 +646,9 @@ export const useGoldStore = defineStore('gold', {
 
         if (status.isOnline && status.wasOffline) {
           // 网络恢复，尝试同步数据
-          console.log('[Store] Network recovered, syncing data...');
           this.handleNetworkRecovery(status.offlineDuration);
         } else if (!status.isOnline) {
           // 网络断开
-          console.log('[Store] Network disconnected');
           this.updateSyncStatus('offline');
         }
       });
@@ -669,7 +660,6 @@ export const useGoldStore = defineStore('gold', {
     async handleNetworkRecovery(offlineDuration) {
       // 如果离线超过5分钟，进行完整数据恢复
       if (offlineDuration > 5 * 60 * 1000) {
-        console.log('[Store] Long offline period, performing full recovery...');
         try {
           await this.startDataRecovery(() => this.fetchAllData());
         } catch (error) {
@@ -754,7 +744,6 @@ export const useGoldStore = defineStore('gold', {
     startHttpPolling() {
       if (httpPollingTimer) return; // 已经在运行
 
-      console.log('[SmartPolling] Starting with intelligent intervals');
       // 立即获取一次
       this.fetchAllData();
 
@@ -767,7 +756,6 @@ export const useGoldStore = defineStore('gold', {
 
         // 根据当前模式获取下次轮询间隔
         const interval = SMART_POLLING.intervals[currentPollingMode];
-        console.log(`[SmartPolling] Next poll in ${interval / 1000}s (${currentPollingMode} mode)`);
         httpPollingTimer = setTimeout(doPoll, interval);
       };
 
@@ -798,7 +786,6 @@ export const useGoldStore = defineStore('gold', {
 
       // 模式变化时记录日志
       if (newMode !== currentPollingMode) {
-        console.log(`[SmartPolling] Mode changed: ${currentPollingMode} -> ${newMode} (no change for ${Math.round(timeSinceLastChange / 1000)}s)`);
         currentPollingMode = newMode;
         // 更新状态显示
         this.pollingMode = newMode;
@@ -816,7 +803,6 @@ export const useGoldStore = defineStore('gold', {
       if (currentPollingMode !== 'active') {
         currentPollingMode = 'active';
         this.pollingMode = 'active';
-        console.log(`[SmartPolling] Data changed, switching to active mode (was: ${prevMode})`);
       }
     },
 
@@ -843,7 +829,6 @@ export const useGoldStore = defineStore('gold', {
         httpPollingTimer = null;
         currentPollingMode = 'active'; // 重置为活跃模式
         this.pollingMode = 'active';
-        console.log('[SmartPolling] Stopped');
       }
     }
   }

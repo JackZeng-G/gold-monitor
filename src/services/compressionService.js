@@ -40,7 +40,6 @@ class CompressionService {
         level: this.compressionLevel
       });
 
-      console.log(`[Compression] Compressed: ${jsonStr.length} -> ${compressed.length} bytes (${Math.round((1 - compressed.length / jsonStr.length) * 100)}% saved)`);
 
       return compressed;
     } catch (error) {

@@ -17,7 +17,6 @@ class NetworkService {
     window.addEventListener('online', () => this.handleOnline());
     window.addEventListener('offline', () => this.handleOffline());
 
-    console.log(`[Network] Initial status: ${this.isOnline ? 'online' : 'offline'}`);
   }
 
   handleOnline() {
@@ -27,7 +26,6 @@ class NetworkService {
 
     if (wasOffline) {
       this.offlineDuration = this.lastOnlineTime - this.lastOfflineTime;
-      console.log(`[Network] Back online after ${Math.round(this.offlineDuration / 1000)}s offline`);
     }
 
     this.notifyListeners({
@@ -43,7 +41,6 @@ class NetworkService {
     this.lastOfflineTime = Date.now();
 
     if (wasOnline) {
-      console.log('[Network] Gone offline');
     }
 
     this.notifyListeners({

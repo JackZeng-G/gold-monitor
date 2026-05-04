@@ -27,17 +27,14 @@ class DataRecovery {
   // 开始恢复流程
   async startRecovery(fetchFunction) {
     if (this.isRecovering) {
-      console.log('[DataRecovery] Already recovering');
       return;
     }
 
     this.isRecovering = true;
-    console.log('[DataRecovery] Starting recovery...');
 
     try {
       // 1. 尝试获取离线存储的数据
       const offlineData = await offlineStorage.getLatestPrices();
-      console.log('[DataRecovery] Found offline data:', Object.keys(offlineData).length, 'sources');
 
       // 2. 获取网络数据
       const networkData = await fetchFunction();
@@ -51,7 +48,6 @@ class DataRecovery {
       // 5. 记录成功同步
       this.recordSync();
 
-      console.log('[DataRecovery] Recovery completed successfully');
       return mergedData;
     } catch (error) {
       console.error('[DataRecovery] Recovery failed:', error);

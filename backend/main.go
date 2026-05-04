@@ -132,6 +132,7 @@ func main() {
 	r.GET("/assets/*filepath", func(c *gin.Context) {
 		filepath := c.Param("filepath")
 		c.FileFromFS("/assets"+filepath, httpFS)
+		c.Header("Cache-Control", "public, max-age=31536000")
 	})
 
 	// 根目录静态文件
@@ -159,6 +160,7 @@ func main() {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "index.html not found"})
 			return
 		}
+		c.Header("Cache-Control", "no-cache")
 		c.Data(200, "text/html; charset=utf-8", data)
 	})
 
@@ -174,23 +176,13 @@ func main() {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "index.html not found"})
 			return
 		}
+		c.Header("Cache-Control", "no-cache")
 		c.Data(200, "text/html; charset=utf-8", data)
 	})
 
 	// 启动服务
 	addr := fmt.Sprintf(":%d", *port)
-	log.Printf("🚀 Server starting on http://localhost:%d", *port)
-	log.Println("📊 API endpoints:")
-	log.Println("   GET /api/gold/prices - 获取所有价格")
-	log.Println("   GET /api/gold/au9999 - Au9999 黄金")
-	log.Println("   GET /api/gold/us     - 美国期货")
-	log.Println("   GET /api/gold/uk     - 英国/伦敦金")
-	log.Println("   GET /api/gold/usdcny - 美元人民币汇率")
-	log.Println("   GET /api/gold/dxy    - 美元指数")
-	log.Println("   GET /api/gold/paxg   - PAXG 数字黄金")
-	log.Println("   GET /api/news        - 黄金资讯")
-	log.Println("   GET /api/health      - 健康检查")
-	log.Printf("📱 Frontend: http://localhost:%d (embedded)", *port)
+		log.Printf("🚀 Server running on http://localhost:%d", *port)
 
 	if err := r.Run(addr); err != nil {
 		log.Fatal("Failed to start server:", err)

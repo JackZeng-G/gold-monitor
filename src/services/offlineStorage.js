@@ -48,7 +48,6 @@ class OfflineStorage {
       request.onsuccess = (event) => {
         this.db = event.target.result;
         this.isReady = true;
-        console.log('[OfflineStorage] Database initialized (v3 with compression support)');
 
         // 启动定期清理
         this.startPeriodicCleanup();
@@ -67,7 +66,6 @@ class OfflineStorage {
         const cleaned = await this.cleanExpiredData();
         if (cleaned > 0) {
           this.stats.cleanups++;
-          console.log(`[OfflineStorage] Periodic cleanup: removed ${cleaned} expired records`);
         }
       } catch (e) {
         console.warn('[OfflineStorage] Periodic cleanup failed:', e);
@@ -309,7 +307,6 @@ class OfflineStorage {
           cursor.continue();
         } else {
           if (expiredCount > 0) {
-            console.log(`[OfflineStorage] Cleaned ${expiredCount} expired records`);
           }
           resolve(expiredCount);
         }
@@ -370,7 +367,6 @@ class OfflineStorage {
 
       const clearRequest = store.clear();
       clearRequest.onsuccess = () => {
-        console.log('[OfflineStorage] All data cleared');
         resolve();
       };
       clearRequest.onerror = () => reject(new Error('Failed to clear store'));

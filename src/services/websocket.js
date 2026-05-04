@@ -60,12 +60,10 @@ class WebSocketService {
   // 连接 WebSocket
   async connect() {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      console.log('[WS] Already connected');
       return true;
     }
 
     if (this.connectionState === 'connecting') {
-      console.log('[WS] Connection already in progress');
       return false;
     }
 
@@ -95,7 +93,6 @@ class WebSocketService {
 
         this.ws.onopen = () => {
           clearTimeout(connectionTimeout);
-          console.log(`[WS] Connected (attempt ${this.reconnectAttempts + 1})`);
 
           this.connectionState = 'connected';
           this.lastConnectedTime = Date.now();
@@ -133,7 +130,6 @@ class WebSocketService {
 
         this.ws.onclose = (event) => {
           clearTimeout(connectionTimeout);
-          console.log(`[WS] Disconnected (code: ${event.code}, reason: ${event.reason || 'none'})`);
 
           this.connectionState = 'disconnected';
           this.stopHeartbeat();
@@ -196,7 +192,6 @@ class WebSocketService {
     const delay = this.calculateReconnectDelay();
     const delaySeconds = (delay / 1000).toFixed(1);
 
-    console.log(`[WS] Reconnecting in ${delaySeconds}s (attempt ${this.reconnectAttempts}/${RECONNECT_CONFIG.maxAttempts === Infinity ? '∞' : RECONNECT_CONFIG.maxAttempts})`);
 
     this.connectionState = 'reconnecting';
     this.notifyStatus({
@@ -224,7 +219,6 @@ class WebSocketService {
   // 立即重连（网络恢复时调用）
   reconnectNow() {
     this.clearReconnectTimer();
-    console.log('[WS] Network recovered, reconnecting immediately');
     this.reconnectAttempts = Math.max(0, this.reconnectAttempts - 1); // 减少一次计数
     this.connect();
   }

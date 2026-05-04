@@ -641,13 +641,9 @@ var NetworkError = class extends Error {
 api.interceptors.request.use((config) => {
 	config.metadata = { startTime: Date.now() };
 	const requestKey = `${config.method}_${config.url}_${JSON.stringify(config.params || {})}_${JSON.stringify(config.data || {})}`;
-	if (requestQueue.has(requestKey)) {
-		console.debug(`[Request] Duplicate request detected: ${requestKey}`);
-		return Promise.reject(new APIError("Duplicate request", "DUPLICATE_REQUEST"));
-	}
+	if (requestQueue.has(requestKey)) return Promise.reject(new APIError("Duplicate request", "DUPLICATE_REQUEST"));
 	requestQueue.set(requestKey, true);
 	config.requestKey = requestKey;
-	console.debug(`[Request] ${config.method?.toUpperCase()} ${config.url}`, config.params || "");
 	return config;
 }, (error) => {
 	console.error("[Request] Interceptor error:", error);
@@ -655,18 +651,14 @@ api.interceptors.request.use((config) => {
 });
 api.interceptors.response.use((response) => {
 	const { config, data } = response;
-	const duration = Date.now() - (config.metadata?.startTime || Date.now());
+	Date.now() - (config.metadata?.startTime || Date.now());
 	if (config.requestKey) requestQueue.delete(config.requestKey);
-	console.debug(`[Response] ${config.method?.toUpperCase()} ${config.url} ${duration}ms`, data);
 	if (data.success === false) throw new APIError(data.error || "Request failed", data.code || "UNKNOWN_ERROR", response);
 	return data.data !== void 0 ? data.data : data;
 }, (error) => {
 	const { config } = error;
 	if (config?.requestKey) requestQueue.delete(config.requestKey);
-	if (axios.isCancel(error)) {
-		console.debug("[Request] Request cancelled:", config?.url);
-		return Promise.reject(new APIError("Request cancelled", "CANCELLED"));
-	}
+	if (axios.isCancel(error)) return Promise.reject(new APIError("Request cancelled", "CANCELLED"));
 	if (!error.response) {
 		console.error("[Request] Network error:", error.message);
 		return Promise.reject(new NetworkError("Network error", error));
@@ -795,7 +787,6 @@ function del(url, params = {}, options = {}) {
 */
 function cancelAllRequests() {
 	requestQueue.clear();
-	console.debug("[Request] All requests cancelled");
 }
 /**
 * 获取请求统计信息
@@ -884,14 +875,8 @@ var WebSocketService = class {
 		return Math.max(delay + jitter, RECONNECT_CONFIG.initialDelay);
 	}
 	async connect() {
-		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-			console.log("[WS] Already connected");
-			return true;
-		}
-		if (this.connectionState === "connecting") {
-			console.log("[WS] Connection already in progress");
-			return false;
-		}
+		if (this.ws && this.ws.readyState === WebSocket.OPEN) return true;
+		if (this.connectionState === "connecting") return false;
 		this.connectionState = "connecting";
 		this.isManualClose = false;
 		this.notifyStatus({
@@ -912,7 +897,6 @@ var WebSocketService = class {
 				}, 1e4);
 				this.ws.onopen = () => {
 					clearTimeout(connectionTimeout);
-					console.log(`[WS] Connected (attempt ${this.reconnectAttempts + 1})`);
 					this.connectionState = "connected";
 					this.lastConnectedTime = Date.now();
 					this.reconnectAttempts = 0;
@@ -943,7 +927,6 @@ var WebSocketService = class {
 				};
 				this.ws.onclose = (event) => {
 					clearTimeout(connectionTimeout);
-					console.log(`[WS] Disconnected (code: ${event.code}, reason: ${event.reason || "none"})`);
 					this.connectionState = "disconnected";
 					this.stopHeartbeat();
 					this.notifyStatus({
@@ -997,8 +980,7 @@ var WebSocketService = class {
 		}
 		this.reconnectAttempts++;
 		const delay = this.calculateReconnectDelay();
-		const delaySeconds = (delay / 1e3).toFixed(1);
-		console.log(`[WS] Reconnecting in ${delaySeconds}s (attempt ${this.reconnectAttempts}/${RECONNECT_CONFIG.maxAttempts === Infinity ? "∞" : RECONNECT_CONFIG.maxAttempts})`);
+		(delay / 1e3).toFixed(1);
 		this.connectionState = "reconnecting";
 		this.notifyStatus({
 			connected: false,
@@ -1020,7 +1002,6 @@ var WebSocketService = class {
 	}
 	reconnectNow() {
 		this.clearReconnectTimer();
-		console.log("[WS] Network recovered, reconnecting immediately");
 		this.reconnectAttempts = Math.max(0, this.reconnectAttempts - 1);
 		this.connect();
 	}
@@ -4937,9 +4918,7 @@ var CompressionService = class {
 			const jsonStr = typeof data === "string" ? data : JSON.stringify(data);
 			if (jsonStr.length < this.compressionThreshold) return jsonStr;
 			const uint8Array = new TextEncoder().encode(jsonStr);
-			const compressed = pako.deflate(uint8Array, { level: this.compressionLevel });
-			console.log(`[Compression] Compressed: ${jsonStr.length} -> ${compressed.length} bytes (${Math.round((1 - compressed.length / jsonStr.length) * 100)}% saved)`);
-			return compressed;
+			return pako.deflate(uint8Array, { level: this.compressionLevel });
 		} catch (error) {
 			console.error("[Compression] Compress failed:", error);
 			return typeof data === "string" ? data : JSON.stringify(data);
@@ -5055,7 +5034,6 @@ var OfflineStorage = class {
 			request.onsuccess = (event) => {
 				this.db = event.target.result;
 				this.isReady = true;
-				console.log("[OfflineStorage] Database initialized (v3 with compression support)");
 				this.startPeriodicCleanup();
 				resolve();
 			};
@@ -5065,11 +5043,7 @@ var OfflineStorage = class {
 		if (this.cleanupTimer) return;
 		this.cleanupTimer = setInterval(async () => {
 			try {
-				const cleaned = await this.cleanExpiredData();
-				if (cleaned > 0) {
-					this.stats.cleanups++;
-					console.log(`[OfflineStorage] Periodic cleanup: removed ${cleaned} expired records`);
-				}
+				if (await this.cleanExpiredData() > 0) this.stats.cleanups++;
 			} catch (e) {
 				console.warn("[OfflineStorage] Periodic cleanup failed:", e);
 			}
@@ -5258,7 +5232,7 @@ var OfflineStorage = class {
 					expiredCount++;
 					cursor.continue();
 				} else {
-					if (expiredCount > 0) console.log(`[OfflineStorage] Cleaned ${expiredCount} expired records`);
+					if (expiredCount > 0) {}
 					resolve(expiredCount);
 				}
 			};
@@ -5304,7 +5278,6 @@ var OfflineStorage = class {
 		return new Promise((resolve, reject) => {
 			const clearRequest = this.db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME).clear();
 			clearRequest.onsuccess = () => {
-				console.log("[OfflineStorage] All data cleared");
 				resolve();
 			};
 			clearRequest.onerror = () => reject(/* @__PURE__ */ new Error("Failed to clear store"));
@@ -5331,20 +5304,14 @@ var DataRecovery = class {
 		localStorage.setItem(this.syncKey, this.lastSyncTime.toString());
 	}
 	async startRecovery(fetchFunction) {
-		if (this.isRecovering) {
-			console.log("[DataRecovery] Already recovering");
-			return;
-		}
+		if (this.isRecovering) return;
 		this.isRecovering = true;
-		console.log("[DataRecovery] Starting recovery...");
 		try {
 			const offlineData = await offlineStorage.getLatestPrices();
-			console.log("[DataRecovery] Found offline data:", Object.keys(offlineData).length, "sources");
 			const networkData = await fetchFunction();
 			const mergedData = this.mergeData(offlineData, networkData);
 			await offlineStorage.cleanExpiredData();
 			this.recordSync();
-			console.log("[DataRecovery] Recovery completed successfully");
 			return mergedData;
 		} catch (error) {
 			console.error("[DataRecovery] Recovery failed:", error);
@@ -5392,16 +5359,12 @@ var NetworkService = class {
 	init() {
 		window.addEventListener("online", () => this.handleOnline());
 		window.addEventListener("offline", () => this.handleOffline());
-		console.log(`[Network] Initial status: ${this.isOnline ? "online" : "offline"}`);
 	}
 	handleOnline() {
 		const wasOffline = !this.isOnline;
 		this.isOnline = true;
 		this.lastOnlineTime = Date.now();
-		if (wasOffline) {
-			this.offlineDuration = this.lastOnlineTime - this.lastOfflineTime;
-			console.log(`[Network] Back online after ${Math.round(this.offlineDuration / 1e3)}s offline`);
-		}
+		if (wasOffline) this.offlineDuration = this.lastOnlineTime - this.lastOfflineTime;
 		this.notifyListeners({
 			isOnline: true,
 			wasOffline,
@@ -5412,7 +5375,7 @@ var NetworkService = class {
 		const wasOnline = this.isOnline;
 		this.isOnline = false;
 		this.lastOfflineTime = Date.now();
-		if (wasOnline) console.log("[Network] Gone offline");
+		if (wasOnline) {}
 		this.notifyListeners({
 			isOnline: false,
 			wasOnline,
@@ -5483,17 +5446,10 @@ var loadHistoryFromStorage = () => {
 				for (const key in history) if (Array.isArray(history[key])) {
 					history[key] = history[key].filter((item) => item.price > 0 && now - item.timestamp < 18e5);
 					const prices = history[key].map((h) => h.price);
-					const uniquePrices = [...new Set(prices)];
-					if (uniquePrices.length >= 2) hasValidData = true;
-					else if (prices.length > 0) {
-						console.log(`Clearing ${key} history: all prices are the same (${uniquePrices[0]})`);
-						history[key] = [];
-					}
+					if ([...new Set(prices)].length >= 2) hasValidData = true;
+					else if (prices.length > 0) history[key] = [];
 				}
-				if (!hasValidData) {
-					console.log("No valid history data found, starting fresh");
-					return {};
-				}
+				if (!hasValidData) return {};
 				return history;
 			}
 		}
@@ -5650,7 +5606,6 @@ var useGoldStore = defineStore("gold", {
 		},
 		async recoverFromOffline() {
 			try {
-				console.log("[Store] Starting offline recovery...");
 				const offlineData = await offlineStorage.getLatestPrices();
 				for (const [source, key] of Object.entries({
 					au9999: "au9999",
@@ -5671,7 +5626,6 @@ var useGoldStore = defineStore("gold", {
 					};
 				}
 				this.lastUpdate = Date.now();
-				console.log("[Store] Offline recovery completed");
 			} catch (error) {
 				console.error("[Store] Offline recovery failed:", error);
 			}
@@ -5706,10 +5660,7 @@ var useGoldStore = defineStore("gold", {
 		},
 		async fetchAllData() {
 			const now = Date.now();
-			if (pendingRequest && now - lastRequestTime < REQUEST_DEDUP_INTERVAL) {
-				console.log("[Store] Request deduplicated, Time since last:", now - lastRequestTime, "ms");
-				return pendingRequest;
-			}
+			if (pendingRequest && now - lastRequestTime < REQUEST_DEDUP_INTERVAL) return pendingRequest;
 			lastRequestTime = now;
 			this.isLoading = true;
 			this.error = null;
@@ -5818,7 +5769,6 @@ var useGoldStore = defineStore("gold", {
 			this.dxy.history = [];
 			this.paxg.history = [];
 			localStorage.removeItem("gold-history-data");
-			console.log("History cleared");
 		},
 		initWebSocket() {
 			this.setupSubscribe();
@@ -5843,7 +5793,6 @@ var useGoldStore = defineStore("gold", {
 			});
 			wsService.connect().then((connected) => {
 				if (!connected) {
-					console.log("WebSocket connection failed, falling back to HTTP polling");
 					this.updateSyncStatus("offline");
 					this.startHttpPolling();
 					this.recoverFromOffline();
@@ -5857,25 +5806,18 @@ var useGoldStore = defineStore("gold", {
 					connectionType: navigator.connection?.effectiveType || "unknown",
 					offlineDuration: status.offlineDuration || 0
 				};
-				if (status.isOnline && status.wasOffline) {
-					console.log("[Store] Network recovered, syncing data...");
-					this.handleNetworkRecovery(status.offlineDuration);
-				} else if (!status.isOnline) {
-					console.log("[Store] Network disconnected");
-					this.updateSyncStatus("offline");
-				}
+				if (status.isOnline && status.wasOffline) this.handleNetworkRecovery(status.offlineDuration);
+				else if (!status.isOnline) this.updateSyncStatus("offline");
 			});
 		},
 		async handleNetworkRecovery(offlineDuration) {
-			if (offlineDuration > 300 * 1e3) {
-				console.log("[Store] Long offline period, performing full recovery...");
-				try {
-					await this.startDataRecovery(() => this.fetchAllData());
-				} catch (error) {
-					console.error("[Store] Recovery failed:", error);
-					await this.fetchAllData();
-				}
-			} else await this.fetchAllData();
+			if (offlineDuration > 300 * 1e3) try {
+				await this.startDataRecovery(() => this.fetchAllData());
+			} catch (error) {
+				console.error("[Store] Recovery failed:", error);
+				await this.fetchAllData();
+			}
+			else await this.fetchAllData();
 			if (!this.wsConnected) wsService.connect();
 		},
 		disconnectWebSocket() {
@@ -5901,14 +5843,12 @@ var useGoldStore = defineStore("gold", {
 		},
 		startHttpPolling() {
 			if (httpPollingTimer) return;
-			console.log("[SmartPolling] Starting with intelligent intervals");
 			this.fetchAllData();
 			const doPoll = async () => {
 				if (!httpPollingTimer) return;
 				await this.fetchAllData();
 				this.adjustPollingMode();
 				const interval = SMART_POLLING.intervals[currentPollingMode];
-				console.log(`[SmartPolling] Next poll in ${interval / 1e3}s (${currentPollingMode} mode)`);
 				httpPollingTimer = setTimeout(doPoll, interval);
 			};
 			httpPollingTimer = setTimeout(doPoll, SMART_POLLING.intervals.active);
@@ -5922,18 +5862,15 @@ var useGoldStore = defineStore("gold", {
 			else if (timeSinceLastChange >= thresholds.activeToNormal) newMode = "normal";
 			else newMode = "active";
 			if (newMode !== currentPollingMode) {
-				console.log(`[SmartPolling] Mode changed: ${currentPollingMode} -> ${newMode} (no change for ${Math.round(timeSinceLastChange / 1e3)}s)`);
 				currentPollingMode = newMode;
 				this.pollingMode = newMode;
 			}
 		},
 		recordPriceChange() {
-			const prevMode = currentPollingMode;
 			lastDataChangeTime = Date.now();
 			if (currentPollingMode !== "active") {
 				currentPollingMode = "active";
 				this.pollingMode = "active";
-				console.log(`[SmartPolling] Data changed, switching to active mode (was: ${prevMode})`);
 			}
 		},
 		getCurrentPollingInterval() {
@@ -5948,7 +5885,6 @@ var useGoldStore = defineStore("gold", {
 				httpPollingTimer = null;
 				currentPollingMode = "active";
 				this.pollingMode = "active";
-				console.log("[SmartPolling] Stopped");
 			}
 		}
 	}

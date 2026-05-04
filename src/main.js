@@ -202,8 +202,6 @@ function showUserNotification(message, type = 'info') {
 // 暴露错误统计（用于调试）
 if (import.meta.env.DEV) {
   window.__ERROR_STATS__ = errorStats
-  console.info('[Error Handling] 全局错误处理已启用')
-  console.info('[Error Handling] 访问 window.__ERROR_STATS__ 查看错误统计')
 }
 
 // ========================================

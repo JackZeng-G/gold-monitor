@@ -62,14 +62,12 @@ api.interceptors.request.use(
 
     // 检查是否已经有相同的请求在处理中
     if (requestQueue.has(requestKey)) {
-      console.debug(`[Request] Duplicate request detected: ${requestKey}`);
       return Promise.reject(new APIError('Duplicate request', 'DUPLICATE_REQUEST'));
     }
 
     requestQueue.set(requestKey, true);
     config.requestKey = requestKey;
 
-    console.debug(`[Request] ${config.method?.toUpperCase()} ${config.url}`, config.params || '');
     return config;
   },
   (error) => {
@@ -89,7 +87,6 @@ api.interceptors.response.use(
       requestQueue.delete(config.requestKey);
     }
 
-    console.debug(`[Response] ${config.method?.toUpperCase()} ${config.url} ${duration}ms`, data);
 
     // 统一响应格式处理
     if (data.success === false) {
@@ -108,7 +105,6 @@ api.interceptors.response.use(
 
     // 处理取消的请求
     if (axios.isCancel(error)) {
-      console.debug('[Request] Request cancelled:', config?.url);
       return Promise.reject(new APIError('Request cancelled', 'CANCELLED'));
     }
 
@@ -282,7 +278,6 @@ export function del(url, params = {}, options = {}) {
  */
 export function cancelAllRequests() {
   requestQueue.clear();
-  console.debug('[Request] All requests cancelled');
 }
 
 /**
