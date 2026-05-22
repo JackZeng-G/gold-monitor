@@ -189,37 +189,28 @@ func main() {
 	}
 }
 
-// accessLogger 访问日志中间件（异常才记录，健康检查有频率限制）
+// accessLogger 访问日志中间件（正常静默，异常最多记3次，恢复记1次）
 func accessLogger() gin.HandlerFunc {
 	var (
 		mu           sync.Mutex
 		failureCount int
-		wasUnhealthy bool
+		wasAbnormal  bool
 	)
 	return func(c *gin.Context) {
-		// 非健康检查请求：执行后只记录错误
-		if c.Request.URL.Path != "/api/health" {
-			c.Next()
-			if c.Writer.Status() >= 400 {
-				log.Printf("[ACCESS] ❌ %s %s -> %d", c.Request.Method, c.Request.URL.Path, c.Writer.Status())
-			}
-			return
-		}
-		// 健康检查请求：正常静默，异常最多记3次，恢复记1次
 		c.Next()
 		status := c.Writer.Status()
 		mu.Lock()
 		defer mu.Unlock()
 		if status >= 400 {
 			if failureCount < 3 {
-				log.Printf("[HEALTH] ❌ 异常 status=%d (第%d次)", status, failureCount+1)
+				log.Printf("[ACCESS] ❌ %s %s -> %d (第%d次)", c.Request.Method, c.Request.URL.Path, status, failureCount+1)
 			}
 			failureCount++
-			wasUnhealthy = true
-		} else if wasUnhealthy {
-			log.Printf("[HEALTH] ✅ 恢复正常 (之前连续异常%d次)", failureCount)
+			wasAbnormal = true
+		} else if wasAbnormal {
+			log.Printf("[ACCESS] ✅ 恢复正常 (之前连续异常%d次)", failureCount)
 			failureCount = 0
-			wasUnhealthy = false
+			wasAbnormal = false
 		}
 	}
 }
