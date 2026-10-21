@@ -94,7 +94,7 @@
 
 ```bash
 # 构建前端
-npm run build
+pnpm run build
 
 # 构建后端（Linux 可执行文件，用于 Docker）
 cd backend
@@ -137,12 +137,12 @@ docker-compose down
 
 1. 安装前端依赖
 ```bash
-npm install
+pnpm install --frozen-lockfile
 ```
 
 2. 启动开发服务器
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 3. 启动后端服务（新终端）
@@ -157,7 +157,7 @@ go run main.go
 
 1. 构建前端
 ```bash
-npm run build
+pnpm run build
 ```
 
 2. 复制静态文件到后端
